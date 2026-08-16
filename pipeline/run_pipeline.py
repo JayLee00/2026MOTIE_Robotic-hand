@@ -290,6 +290,7 @@ class Pipeline:
         self.args = args
         self.log = log
         self.pool = ProcPool()
+        self.early_procs: dict[str, Proc] = {}
         self.watch: SequenceWatcher | None = None
         self.logdir = ROOT / "logs" / time.strftime("run_%m%d_%H%M%S")
         self.logdir.mkdir(parents=True, exist_ok=True)
@@ -312,6 +313,9 @@ class Pipeline:
             "fruit_num": cfg["stiffness_fruit_numbers"][stiff_fruit],
             # 강성 결과 GUI 는 기본 ON (분산환경 때와 동일). --no-stiffness-gui 로만 끈다.
             "gui_flag": "--no-gui" if args.no_stiffness_gui else "",
+            # seq 2 VTDP 정책 (kist_deploy_pkg) — 정책은 스스로 종료하지 않으므로 시간 제한
+            "inhand_policy_duration": (cfg.get("inhand_policy") or {}).get("duration_s", 15),
+            "inhand_policy_device": (cfg.get("inhand_policy") or {}).get("device", "cuda:1"),
         }
         self.ctx["calibration"] = args.calibration or fill(cfg["grasp"]["calibration"], self.ctx)
 
@@ -362,6 +366,8 @@ class Pipeline:
 
         self._check("sequence_arbiter", self._check_arbiter)                       # 제어 PC 소유
         self._check("camera", self._check_camera)                                 # 제어 PC 소유
+        self._check("paxini_raw", self._check_paxini_raw)                         # 제어 PC 소유
+        self._check("inhand_policy_inputs", self._check_inhand_inputs)            # 제어 PC 소유
         self._check("move_group", self.ensure_twin, auto_startable=True)          # 러너가 기동
         self._check("model_services", self.ensure_services, auto_startable=True)  # 러너가 기동
 
@@ -439,6 +445,53 @@ class Pipeline:
                 "  카메라는 Control PC 가 발행한다 — Control PC 담당자에게 realsense_front "
                 "launch(align_depth.enable:=true) 기동을 요청할 것.\n"
                 "  진단: tools/camera/check_camera.sh")
+
+    def _check_paxini_raw(self):
+        """신규 물성 추론 데모(deploy_task3_ros2_demo)는 /paxini/right/raw(4x127x3)가 필수다.
+
+        미발행이어도 데모 코드는 경고만 찍고 힘=0 으로 DONE 까지 진행한다 — '성공했는데
+        결과가 쓰레기'인 조용한 실패이므로, 로봇을 움직이기 전에 여기서 막는다.
+        """
+        topic = self.cfg["ros"].get("paxini_raw_topic")
+        if not topic:
+            return
+        if "stiffness" in self.args.skip:
+            self.log("stiffness 단계 skip — paxini raw 점검 생략")
+            return
+        n, took = self._wait_until(lambda: self.watch.count_publishers(topic),
+                                   self._discovery_s())
+        self.log(f"paxini raw {topic}: publishers={n} (discovery {took:.1f}s)")
+        if n == 0:
+            raise BlockerError(
+                f"{topic} 발행자가 없다 — 신규 물성 추론 데모의 필수 입력(127점 촉각 분포).\n"
+                "  제어 PC 에서 손끝 무접촉 상태로 실행할 것 (시작 순간 0점 tare):\n"
+                "  python3 ~/Dual_Arm_Hand_Ctrl/tools/paxini_writer.py --hand r")
+
+    def _check_inhand_inputs(self):
+        """VTDP 정책(seq 2)의 입력 3종을 점검한다. --inhand-legacy(HDF5 재생)면 생략."""
+        topics = self.cfg["ros"].get("inhand_policy_topics") or []
+        if not topics:
+            return
+        if "inhand" in self.args.skip:
+            self.log("inhand 단계 skip — 정책 입력 점검 생략")
+            return
+        if self.args.inhand_legacy:
+            self.log("--inhand-legacy — 정책 입력 점검 생략 (HDF5 재생 경로)")
+            return
+        _, took = self._wait_until(
+            lambda: all(self.watch.count_publishers(t) > 0 for t in topics),
+            self._discovery_s())
+        missing = []
+        for t in topics:
+            c = self.watch.count_publishers(t)
+            self.log(f"inhand policy {t}: publishers={c}")
+            if c == 0:
+                missing.append(t)
+        if missing:
+            raise BlockerError(
+                f"VTDP 정책 입력 토픽 발행자가 없다: {missing}\n"
+                "  제어 PC 의 손 관절/촉각/카메라(compressed) 발행을 확인할 것. "
+                "기존 HDF5 재생으로 돌리려면 --inhand-legacy.")
 
     def _fmt(self, st):
         if st is None:
@@ -553,15 +606,48 @@ class Pipeline:
         cmd = fill(self.cfg["services"]["place_logger"], self.ctx)
         return self.pool.add(Proc("place_logger", cmd, self.logdir / "place_logger.log", self.log))
 
+    def _stage_template(self, stage: str):
+        """단계 명령 템플릿. inhand 는 --inhand-legacy 시 HDF5 재생 경로로 전환한다."""
+        st = self.cfg["stages"].get(stage) or {}
+        if stage == "inhand" and self.args.inhand_legacy:
+            return st.get("command_legacy") or st.get("command")
+        return st.get("command")
+
+    def spawn_early_stages(self):
+        """stages.*.spawn == early 인 단계를 체인 시작 시 미리 spawn 한다.
+
+        시퀀스 규약상 각 skill 은 wait_for_previous_done 으로 자기 차례를 스스로
+        기다리므로 조기 spawn 이 순서를 깨지 않는다. VTDP 정책(seq 2)은 이 시간에
+        모델 로드 + CUDA 예열을 파지(seq 1)와 겹쳐 끝낸다 (engage 전 무발행 = 안전).
+        """
+        self.early_procs: dict[str, Proc] = {}
+        for stage in ORDER:
+            if stage in self.args.skip:
+                continue
+            st = self.cfg["stages"].get(stage) or {}
+            template = self._stage_template(stage)
+            if st.get("spawn") == "early" and template:
+                cmd = fill(template, self.ctx)
+                self.log(f"[{stage}] 조기 spawn (프리워밍) — skill 이 직전 DONE 을 자체 대기한다")
+                self.log(f"명령: {cmd}")
+                self.early_procs[stage] = self.pool.add(
+                    Proc(stage, cmd, self.logdir / f"skill_{stage}.log", self.log))
+
     # ── 단계 실행 ────────────────────────────────────────────────────────
     def run_stage(self, stage: str):
         number = self.cfg["sequence_numbers"][stage]
         timeout = self.cfg["timeouts_s"][stage] * self.args.timeout_scale
         self.log.rule(f"seq {number} — {KOREAN[stage]} ({stage})")
 
-        proc = None
-        template = (self.cfg["stages"].get(stage) or {}).get("command")
-        if template:
+        proc = self.early_procs.get(stage)
+        template = self._stage_template(stage)
+        if proc is not None:
+            if not proc.alive():
+                raise StageError(
+                    f"조기 spawn 된 '{stage}' 프로세스가 자기 차례 전에 죽었다 "
+                    f"(rc={proc.returncode()})\n" + proc.tail(30))
+            self.log(f"조기 spawn 된 '{stage}' (pid {proc.proc.pid}) 진행 관측")
+        elif template:
             cmd = fill(template, self.ctx)
             self.log(f"명령: {cmd}")
             proc = self.pool.add(Proc(stage, cmd, self.logdir / f"skill_{stage}.log", self.log))
@@ -637,6 +723,7 @@ class Pipeline:
 
         self.start_place_server()
         self.start_place_logger()
+        self.spawn_early_stages()
 
         for stage in ORDER:
             if stage in self.args.skip:
@@ -667,6 +754,9 @@ def parse_args(cfg: dict):
                    help="place 모델 서비스 5종: auto=없으면 기동(기본), off=이미 떠 있어야 함")
     p.add_argument("--twin", choices=["auto", "off"], default="auto",
                    help="MoveIt 트윈: auto=없으면 기동(기본), off=이미 떠 있어야 함")
+    p.add_argument("--inhand-legacy", action="store_true",
+                   help="seq 2 를 기존 HDF5 궤적 재생(inhand_sequence_2.py)으로 되돌린다 "
+                        "(기본: VTDP 학습 정책)")
     p.add_argument("--place-logger", action="store_true", help="/place/status 로거도 함께 띄운다")
     p.add_argument("--no-stiffness-gui", action="store_true",
                    help="강성 결과 GUI 를 띄우지 않는다 (기본: 띄움 — DISPLAY 필요)")

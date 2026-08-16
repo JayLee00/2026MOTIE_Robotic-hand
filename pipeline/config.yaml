@@ -15,6 +15,14 @@ ros:
     - /front_cam/front/color/image_raw
     - /front_cam/front/aligned_depth_to_color/image_raw
     - /front_cam/front/color/camera_info
+  # 신규 물성 추론 데모(deploy_task3_ros2_demo)의 필수 입력 — 127점 촉각 분포.
+  # 미발행이어도 데모는 힘=0 으로 조용히 DONE 까지 가므로(결과만 무의미) preflight 에서 잡는다.
+  paxini_raw_topic: /paxini/right/raw
+  # VTDP 정책(seq 2)의 입력 토픽 — --inhand-legacy 가 아닐 때 preflight 가 점검한다.
+  inhand_policy_topics:
+    - /hand/right/joint_states
+    - /paxini/right/ft
+    - /front_cam/front/color/image_raw/compressed
 
 # collab_policy.md 고정 배정 번호 (client_id 도 동일, 0 금지)
 sequence_numbers:
@@ -55,6 +63,12 @@ stiffness_fruit_for:
   tomato: tomato
   plum: plum
 
+# seq 2 VTDP 정책 설정
+inhand_policy:
+  duration_s: 15     # 정책 실행 시간 [s] — 정책은 스스로 종료하지 않는다 (성공판정 없음).
+                     # 종료 후 goto+squeeze 재파지로 마무리. 비전 기반 종료판정은 후속 과제.
+  device: cuda:1     # 추론 GPU — place 서비스(GPU0 Molmo ~17GB)와 분리
+
 # 상시 서버 (파이프라인 시작 전에 떠 있어야 하는 것들)
 services:
   # place 모델 마이크로서비스 5종 (conda 환경별 HTTP 서버)
@@ -87,20 +101,34 @@ stages:
       --execute_robot --yes --query "{query}"
 
   # ── seq 2 : 손 안 조작 ───────────────────────────────────────────────────
+  # 2026-08-16 업데이트: VTDP 학습 정책(kist_deploy_pkg/1_policy)이 기본 경로.
+  #   spawn: early — 러너가 체인 시작 시 미리 spawn 해 모델 로드/CUDA 예열이 파지와
+  #   겹쳐 돈다 (skill 이 wait_for_previous_done(1) 으로 자체 대기하므로 안전.
+  #   정책은 engage 전 무발행). 기존 HDF5 재생은 --inhand-legacy 로 즉시 복귀.
   inhand:
+    spawn: early
     command: >-
+      ros2 topic pub --once /hand/right/cmd_mode std_msgs/msg/Int32 "{data: 1}" &&
+      cd {inhand_dir} &&
+      /usr/bin/python3 scripts/inhand_policy_sequence_2.py
+      --policy-duration {inhand_policy_duration} --device {inhand_policy_device}
+    command_legacy: >-
       ros2 topic pub --once /hand/right/cmd_mode std_msgs/msg/Int32 "{data: 1}" &&
       cd {inhand_dir} &&
       /usr/bin/python3 scripts/inhand_sequence_2.py
 
   # ── seq 3 : 물성(강성) 추론 ──────────────────────────────────────────────
   # 과일 선택 프롬프트를 echo 로 주입한다 ([1]자두 [2]키위 [3]토마토 [4]레몬).
+  # 2026-08-16 업데이트: ecoflex2fruit 3속성(무게·크기·강성) 데모 진입점으로 교체.
+  #   - 시퀀스 규약(SequenceClient(3))·stdin 과일번호·--no-gui 계약은 구판과 동일 (드롭인)
+  #   - 새 하드 전제: /paxini/right/raw (4x127x3) 발행 — preflight 가 점검한다
+  #   - 롤백: 아래 파일명을 deploy_task3_ros2.py 로 되돌리면 구판(강성 등급) 사용
   stiffness:
     command: >-
       ros2 topic pub --once /hand/right/cmd_mode std_msgs/msg/Int32 "{data: 1}" &&
       cd {physics_dir} &&
       source env.sh &&
-      echo {fruit_num} | python3 stiffness_deploy_ros2/launch/deploy_task3_ros2.py {gui_flag}
+      echo {fruit_num} | python3 stiffness_deploy_ros2/launch/deploy_task3_ros2_demo.py {gui_flag}
 
   # ── seq 4 : 물체 내려놓기 ────────────────────────────────────────────────
   # 상시 서버(services.place_server)가 담당하므로 단계 진입 시 spawn 하지 않는다.
