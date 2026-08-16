@@ -295,8 +295,14 @@ class Pipeline:
         self.logdir = ROOT / "logs" / time.strftime("run_%m%d_%H%M%S")
         self.logdir.mkdir(parents=True, exist_ok=True)
 
+        # 2026-08-17: --fruit 는 쉼표 목록 지원 — 바퀴(lap)마다 순서대로 잡는다.
+        # 예: --fruit lemon,tomato,peach → 1바퀴 lemon, 2바퀴 tomato, 3바퀴 peach, 이후 순환
+        self.fruits = [f.strip() for f in args.fruit.split(",") if f.strip()]
+        if not self.fruits:
+            raise SystemExit("--fruit 가 비어 있다")
+
         stiff_fruit = args.stiffness_fruit or cfg["stiffness_fruit_for"].get(
-            args.fruit, cfg["stiffness_fruit_for"]["default"])
+            self.fruits[0], cfg["stiffness_fruit_for"]["default"])
         if stiff_fruit not in cfg["stiffness_fruit_numbers"]:
             raise SystemExit(
                 f"--stiffness-fruit '{stiff_fruit}' 은 강성 모델에 없다. "
@@ -309,7 +315,7 @@ class Pipeline:
             "inhand_dir": str(ROOT / "skill-set" / "in-hand-reorientation"),
             "physics_dir": str(ROOT / "skill-set" / "inference-physics-property"),
             "place_dir": str(ROOT / "skill-set" / "place"),
-            "query": args.fruit,
+            "query": self.fruits[0],
             "fruit_num": cfg["stiffness_fruit_numbers"][stiff_fruit],
             # 강성 결과 GUI 는 기본 ON (분산환경 때와 동일). --no-stiffness-gui 로만 끈다.
             "gui_flag": "--no-gui" if args.no_stiffness_gui else "",
@@ -958,6 +964,14 @@ class Pipeline:
                 self.log.rule(f"체인 {lap}/{self.args.loops} 바퀴")
             elif lap > 1:
                 self.log.rule(f"체인 {lap}바퀴째 (무한 반복 — Ctrl+C 로 정지)")
+            # 바퀴별 과일 선택 (--fruit 쉼표 목록 순환) + 강성 모델 매핑 갱신
+            fruit = self.fruits[(lap - 1) % len(self.fruits)]
+            stiff = self.args.stiffness_fruit or self.cfg["stiffness_fruit_for"].get(
+                fruit, self.cfg["stiffness_fruit_for"]["default"])
+            self.ctx["query"] = fruit
+            self.ctx["fruit_num"] = self.cfg["stiffness_fruit_numbers"][stiff]
+            self.log(f"이번 바퀴 과일: {fruit!r} / 강성 모델: {stiff} "
+                     f"(번호 {self.ctx['fruit_num']})")
             # 매 바퀴 pick 초기 위치로 천천히 복귀 후 pick 부터 시작 (2026-08-17)
             self.goto_pick_home("체인 시작" if lap == 1 else "place 완료 → 다음 체인 준비")
             self.spawn_early_stages()
@@ -983,7 +997,8 @@ def parse_args(cfg: dict):
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="⚠ 이 명령은 실제 로봇을 움직인다. E-stop 옆 인원 상주 필수.")
     p.add_argument("-f", "--fruit", default="orange",
-                   help="파지할 물체명 (SAM3 텍스트 쿼리). 기본: orange")
+                   help="파지할 물체명 (SAM3 텍스트 쿼리). 쉼표 목록이면 바퀴마다 순서대로 "
+                        "잡는다 — 예: lemon,tomato,peach (3바퀴 후 순환)")
     p.add_argument("--stiffness-fruit", default=None,
                    choices=sorted(cfg["stiffness_fruit_numbers"]),
                    help="강성 추론에 쓸 과일 모델. 미지정 시 --fruit 로부터 매핑 "

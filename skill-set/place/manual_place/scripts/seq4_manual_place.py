@@ -87,6 +87,13 @@ HAND_RELEASE_TARGET = [4096, -4096, 0, 0,
                        0, 1000, 1000, 1000,
                        0, 1000, 1000, 1000]   # 벌리는 타겟 (counts)
 HAND_RELEASE_RAMP_S = 2.0            # 천천히 놓는 보간 시간(초). --release-ramp 로 변경 가능
+
+# place 진입(stiffness 끝) 시 재파지 전에 벌리는 타겟 — 2026-08-17 사용자 지정.
+# (릴리즈 타겟과 별개: 릴리즈는 1000 계열 HAND_RELEASE_TARGET, 진입 열기는 1500 계열)
+HAND_OPEN_TARGET = [4096, -4096, 0, 0,
+                    0, 1500, 1500, 1500,
+                    0, 1500, 1500, 1500,
+                    0, 1500, 1500, 1500]   # 벌리는 타겟 (counts)
 HAND_AFTER_RELEASE_BACK_TO_MODE1 = True  # 릴리즈 후 top 복귀 시 mode 1(Position) 재진입
 
 # ── 속도/주기 ──
@@ -354,6 +361,8 @@ def _validate_config(n_slots_needed=None):
         chk_arm(f"FRANKA_PLACE_DOWN[{i}] (slot {i+1})", FRANKA_PLACE_DOWN[i])
     if len(HAND_RELEASE_TARGET) != HAND_DOF:
         problems.append("HAND_RELEASE_TARGET 은 16개여야 함")
+    if len(HAND_OPEN_TARGET) != HAND_DOF:
+        problems.append("HAND_OPEN_TARGET 은 16개여야 함")
     if len(Hand_target_for_only_place) != HAND_DOF:
         problems.append("Hand_target_for_only_place 은 16개여야 함")
     bad = [j for j in HAND_EXTRA_GRIP_JOINTS_1IDX if not 1 <= j <= 16]
@@ -540,7 +549,7 @@ def run_sequence(node: Seq4ManualPlace, slot: int, args):
     node.sleep_spin(0.05)
     node.send_hand(saved_hand)
     node.sleep_spin(0.05)
-    node.hand_ramp(HAND_RELEASE_TARGET, 2.0, "place 전 열기 (OPEN)")
+    node.hand_ramp(HAND_OPEN_TARGET, 2.0, "place 전 열기 (OPEN, 1500 계열)")
     node.sleep_spin(0.3)
     node.hand_ramp(Hand_target_for_only_place, HAND_PLACE_GRIP_RAMP_S,
                    "place 전용 그립으로 쥐기 (Hand_target_for_only_place)")
