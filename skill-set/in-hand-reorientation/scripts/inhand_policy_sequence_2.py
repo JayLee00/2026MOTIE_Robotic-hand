@@ -64,18 +64,13 @@ LATCH = QoSProfile(reliability=ReliabilityPolicy.RELIABLE,
                    durability=DurabilityPolicy.TRANSIENT_LOCAL,
                    history=HistoryPolicy.KEEP_LAST, depth=1)
 
-# ── 팔 이동 (기존 inhand_sequence_2.py 와 동일) ─────────────────────────────
-POSE_COMMANDER_CMD = [
-    'ros2', 'run', 'franka_kistar_bringup', 'pose_commander.py', '--ros-args',
-    '-p', 'gui:=true',
-    '-p', 'planning_group:=right_arm',
-    '-p', 'end_effector_link:=right_fr3_link8',
-    '-p', 'reference_frame:=right_fr3_link0',
-    '-p', 'planning_time:=5.0',
-    '-p', 'traj_action:=/right_arm_controller/follow_joint_trajectory',
-]
-POSE_TARGET = '0.2333 0.1590 -0.0668 -0.3373 0.2612 0.3084 0.8502'
-POSE_COMMANDER_STDIN = f'{POSE_TARGET}\ny\nquit\n'
+# ── 팔 이동: pick 후 제시 자세 (inhand 이동 = stiffness·place 캡처가 물려받음) ──
+# 2026-08-16: Cartesian pose_commander → 관절각 goto_q.py(MoveIt 충돌회피 plan→execute)
+# 로 교체. 플랜 성공 = planning scene(정적 박스+자가충돌) 검사 통과.
+# 구 좌표 (참고용 보존 — pose_commander stdin 형식, right_fr3_link0 기준 link8 pose):
+#   POSE_TARGET = '0.2333 0.1590 -0.0668 -0.3373 0.2612 0.3084 0.8502'
+ARM_Q_TARGET = ['-0.2866', '1.4185', '0.2677', '-1.9216', '0.7769', '1.2157', '2.0401']
+GOTO_Q = str(SKILL_ROOT.parent.parent / 'tools' / 'goto_q.py')
 POST_MOVE_DELAY = 1.0
 
 # ── 마무리 재파지 (기존과 동일 값 — 단 REPO_ROOT 는 이 트리 기준 동적 계산) ──
@@ -293,9 +288,10 @@ def run_policy_chain(node, bridge: PolicyBridge, policy: PolicyProc,
                      side: str, duration_s: float):
     print('in-hand manipulation start (VTDP policy)', flush=True)
 
-    # 1) 팔 이동 (기존과 동일)
-    _run_and_wait(POSE_COMMANDER_CMD, 'pose_commander.py',
-                  stdin_text=POSE_COMMANDER_STDIN)
+    # 1) 팔 이동 — 관절각 목표로 MoveIt 충돌회피 이동 (플랜 실패 = 체인 중단)
+    rc = _run_and_wait(['/usr/bin/python3', GOTO_Q, *ARM_Q_TARGET, '--yes'], 'goto_q.py')
+    if rc != 0:
+        raise PolicyError(f'팔 이동 실패 (goto_q rc={rc}) — 플랜/실행 로그 확인')
     node.get_logger().info(f'이동 완료 → {POST_MOVE_DELAY:.0f}초 대기')
     time.sleep(POST_MOVE_DELAY)
 

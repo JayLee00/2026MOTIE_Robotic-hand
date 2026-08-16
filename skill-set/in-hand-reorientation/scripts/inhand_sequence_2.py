@@ -38,20 +38,23 @@ from sequence_client import SequenceClient, SequenceError
 
 REPO_ROOT = '/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/in-hand-reorientation'
 
-# Start 직후 실행할 pose_commander 명령
-POSE_COMMANDER_CMD = [
-    'ros2', 'run', 'franka_kistar_bringup', 'pose_commander.py', '--ros-args',
-    '-p', 'gui:=true',
-    '-p', 'planning_group:=right_arm',
-    '-p', 'end_effector_link:=right_fr3_link8',
-    '-p', 'reference_frame:=right_fr3_link0',
-    '-p', 'planning_time:=5.0',
-    '-p', 'traj_action:=/right_arm_controller/follow_joint_trajectory',
-]
+# 2026-08-16: 팔 이동을 Cartesian pose_commander → 관절각 goto_q.py(MoveIt 충돌회피)
+# 로 교체. 구 명령/좌표는 참고용으로 주석 보존.
+# POSE_COMMANDER_CMD = [
+#     'ros2', 'run', 'franka_kistar_bringup', 'pose_commander.py', '--ros-args',
+#     '-p', 'gui:=true',
+#     '-p', 'planning_group:=right_arm',
+#     '-p', 'end_effector_link:=right_fr3_link8',
+#     '-p', 'reference_frame:=right_fr3_link0',
+#     '-p', 'planning_time:=5.0',
+#     '-p', 'traj_action:=/right_arm_controller/follow_joint_trajectory',
+# ]
 # pose_commander.py stdin: 목표 pose(x y z qx qy qz qw) → 실행 확인(y) → 종료(quit)
-# ('quit'이 있어야 _input_loop가 종료되어 proc.wait()가 "이동 완료" 신호가 된다)
-POSE_TARGET = '0.2333 0.1590 -0.0668 -0.3373 0.2612 0.3084 0.8502'
-POSE_COMMANDER_STDIN = f'{POSE_TARGET}\ny\nquit\n'
+# POSE_TARGET = '0.2333 0.1590 -0.0668 -0.3373 0.2612 0.3084 0.8502'
+# POSE_COMMANDER_STDIN = f'{POSE_TARGET}\ny\nquit\n'
+ARM_Q_TARGET = ['-0.2866', '1.4185', '0.2677', '-1.9216', '0.7769', '1.2157', '2.0401']
+GOTO_Q = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))))), 'tools', 'goto_q.py')
 
 # pose 이동 완료 후 대기 시간 [s]
 POST_MOVE_DELAY = 1.0
@@ -125,10 +128,9 @@ def _run_and_wait(cmd, label, stdin_text=None, cwd=None):
 
 
 def run_pose_commander(node):
-    """pose_commander 실행 → 로봇 이동 완료까지 대기 (프로세스 종료 = 이동 완료)."""
-    node.get_logger().info('launching pose_commander.py')
-    _run_and_wait(POSE_COMMANDER_CMD, 'pose_commander.py',
-                  stdin_text=POSE_COMMANDER_STDIN)
+    """관절각 목표(goto_q, MoveIt 충돌회피)로 이동 → 완료까지 대기 (프로세스 종료 = 완료)."""
+    node.get_logger().info('launching goto_q.py (joint target)')
+    _run_and_wait(['/usr/bin/python3', GOTO_Q, *ARM_Q_TARGET, '--yes'], 'goto_q.py')
 
 
 def run_hand_publisher(node, side):

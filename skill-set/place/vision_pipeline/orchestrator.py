@@ -530,7 +530,13 @@ class PlacePipeline:
         self._status("child(물체) 인지 시작 (파지점 검출 + 분할 + 형상 완성)")
         self.log("[3-8] child molmo (grasp point)")
         pts_child = self.m.molmo(rgb_c, prompts.grasp_prompt())     # FIXED prompt (no grasp arg)
-        assert pts_child, "child molmo returned no point (grasp prompt)"
+        if not pts_child:
+            # 2026-08-16 실측: 재파지 후 과일이 손바닥에 크게 가려지면 관계형 프롬프트
+            # ("object being held by the robot hand")가 빈 결과를 낸다. 같은 프레임에서
+            # 'Point to the fruit' 는 명중했으므로 폴백으로 한 번 더 묻는다.
+            self.log("[3-8] grasp prompt no point -> fallback 'Point to the fruit'")
+            pts_child = self.m.molmo(rgb_c, "Point to the fruit")
+        assert pts_child, "child molmo returned no point (grasp prompt + fruit fallback)"
         pt_child = pts_child[0]
         self.mon.img_points("a23", rgb_c, [pt_child], (40, 220, 40))
         self.log("[3-9] child sam (interactive point->mask)")
