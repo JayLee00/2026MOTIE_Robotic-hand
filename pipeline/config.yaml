@@ -150,10 +150,16 @@ stages:
       echo {fruit_num} | python3 stiffness_deploy_ros2/launch/deploy_task3_ros2_demo.py {gui_flag}
 
   # ── seq 4 : 물체 내려놓기 ────────────────────────────────────────────────
-  # 상시 서버(services.place_server)가 담당하므로 단계 진입 시 spawn 하지 않는다.
-  # 러너는 arbiter 의 seq 4 DONE 만 관측한다.
+  # 2026-08-16(2차): vision place 서버 → **수동 티칭 place 체인**으로 교체 (사용자 지시).
+  #   seq4_manual_place.py --chain 이 seq3 DONE 대기 → 제어권 4 획득 → 티칭 포인트 place
+  #   → DONE 반납까지 규약 전부 수행. slot 은 상태파일(.seq4_manual_slot)로 1→5 자동 진행.
+  #   command 가 설정돼 있으면 러너는 place 서버·모델 서비스 5종을 기동하지 않는다.
+  #   구 vision 서버 경로 복귀: 아래 command 를 null 로 되돌리면 된다.
   place:
-    command: null
+    command: >-
+      ros2 topic pub --once /hand/right/cmd_mode std_msgs/msg/Int32 "{data: 1}" &&
+      cd {place_dir} &&
+      /usr/bin/python3 manual_place/scripts/seq4_manual_place.py --chain
 
 grasp:
   calibration: "{grasp_dir}/configs/calibration/extrinsic_20260612_170053.json"

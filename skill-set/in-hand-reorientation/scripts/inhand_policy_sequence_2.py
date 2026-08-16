@@ -40,7 +40,8 @@ import rclpy
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import (DurabilityPolicy, HistoryPolicy, QoSProfile,
                        ReliabilityPolicy)
-from std_msgs.msg import Bool, Float64MultiArray
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Bool, Float32MultiArray, Float64MultiArray, Int32
 
 from dual_arm_msgs.msg import SequenceState
 from sequence_client import SequenceClient, SequenceError
@@ -73,22 +74,30 @@ ARM_Q_TARGET = ['-0.2866', '1.4185', '0.2677', '-1.9216', '0.7769', '1.2157', '2
 GOTO_Q = str(SKILL_ROOT.parent.parent / 'tools' / 'goto_q.py')
 POST_MOVE_DELAY = 1.0
 
-# ── 마무리 재파지 (기존과 동일 값 — 단 REPO_ROOT 는 이 트리 기준 동적 계산) ──
-HAND_GOTO = str(SKILL_ROOT / 'in-hand' / 'hand_goto_target.py')
-HAND_SQUEEZE = str(SKILL_ROOT / 'in-hand' / 'hand_manual_squeeze.py')
-MANUAL_TARGET = [
-    '1.57', '-1.0', '0.9897', '0.8907',        # thumb
-    '-0.2477', '0.4453', '1.1134', '0.5566',   # index
-    '0.0002',  '0.4687', '0.9682', '0.5709',   # middle
-    '0.2972',  '0.4453', '0.8907', '0.4453',   # ring
-]
-GOTO_RAMP_SECS = '3.0'
-SQUEEZE_JOINTS = [1, 2, 5, 6, 9, 10, 14]
-SQUEEZE_KEY = '+'
-SQUEEZE_PRESSES = 1
-SQUEEZE_READY_TIMEOUT = 12.0
-SQUEEZE_STARTUP_WAIT = 1.0
-SQUEEZE_INTERVAL = 1.5
+# ── 마무리 재파지 (2026-08-16 사용자 지정: OPEN 2s 보간 → REGRIP 쥐기) ────────
+# 정책 종료(홀드) 상태에서 mode 1 그대로: ① 살짝 펴는 자세로 2초 선형 보간
+# ② 이어서 쥐는 자세로 보간 → 쥔 채 stiffness(3)에 인계.
+# (thumb×4, index×4, middle×4, ring×4 — encoder counts)
+HAND_OPEN_AFTER_POLICY = [4096, -4096, 0, 0,
+                          0, 1000, 1000, 1000,
+                          0, 1000, 1000, 1000,
+                          0, 1000, 1000, 1000]
+HAND_REGRIP_AFTER_OPEN = [4096, -4096, 2000, 2000,
+                          0, 2000, 2000, 3000,
+                          0, 2000, 2000, 3000,
+                          0, 2000, 2000, 3000]
+HAND_RAMP_S = 2.0            # 보간 시간 [s] (열기/쥐기 각각)
+HAND_RAMP_HZ = 100.0         # 보간 발행 주기
+
+# (구) goto+squeeze 마무리 — 위 OPEN/REGRIP 보간으로 대체, 참고 보존
+# HAND_GOTO = str(SKILL_ROOT / 'in-hand' / 'hand_goto_target.py')
+# HAND_SQUEEZE = str(SKILL_ROOT / 'in-hand' / 'hand_manual_squeeze.py')
+# MANUAL_TARGET = ['1.57', '-1.0', '0.9897', '0.8907', '-0.2477', '0.4453', '1.1134',
+#                  '0.5566', '0.0002', '0.4687', '0.9682', '0.5709', '0.2972', '0.4453',
+#                  '0.8907', '0.4453']
+# GOTO_RAMP_SECS = '3.0'; SQUEEZE_JOINTS = [1, 2, 5, 6, 9, 10, 14]
+BEST_EFFORT = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT,
+                         history=HistoryPolicy.KEEP_LAST, depth=1)
 
 
 class PolicyError(RuntimeError):
@@ -168,7 +177,14 @@ class PolicyBridge:
         self.node = rclpy.create_node('inhand_policy_wrapper')
         self._lock = threading.Lock()
         self._last_debug = None
+        self.hand_q = None                     # 측정 손 관절 [16] counts
+        self._hand_cmd = None                  # 우리가 마지막으로 명령한 타겟
         self.pub_engage = self.node.create_publisher(Bool, ENGAGE_TOPIC, LATCH)
+        self.pub_hand = self.node.create_publisher(
+            Float32MultiArray, '/hand/right/q_target', BEST_EFFORT)
+        self.pub_mode = self.node.create_publisher(Int32, '/hand/right/cmd_mode', 10)
+        self.node.create_subscription(
+            JointState, '/hand/right/joint_states', self._on_hand, BEST_EFFORT)
         self.node.create_subscription(Float64MultiArray, DEBUG_TOPIC, self._on_debug, 10)
         self._executor = SingleThreadedExecutor()
         self._executor.add_node(self.node)
@@ -183,6 +199,28 @@ class PolicyBridge:
     def _on_debug(self, msg):
         with self._lock:
             self._last_debug = list(msg.data)
+
+    def _on_hand(self, msg):
+        if len(msg.position) >= 16:
+            self.hand_q = [float(msg.position[j]) for j in range(16)]
+
+    def hand_ramp(self, target, duration_s: float, label: str):
+        """mode 1 유지한 채 손 타겟을 선형 보간으로 이동 (rclpy publish 는 스레드 안전 —
+        executor 스레드가 spin 중이어도 메인 스레드에서 발행 가능)."""
+        start = self._hand_cmd if self._hand_cmd is not None else \
+            (list(self.hand_q) if self.hand_q is not None else None)
+        if start is None:
+            raise PolicyError('hand 측정(/hand/right/joint_states) 미수신 — 보간 시작점 없음')
+        steps = max(1, int(duration_s * HAND_RAMP_HZ))
+        print(f'[inhand-policy] hand 보간 [{label}] : {duration_s:.1f}s', flush=True)
+        for i in range(1, steps + 1):
+            t = i / steps
+            q = [a + (b - a) * t for a, b in zip(start, target)]
+            self.pub_hand.publish(Float32MultiArray(data=[float(v) for v in q]))
+            time.sleep(1.0 / HAND_RAMP_HZ)
+        self.pub_hand.publish(Float32MultiArray(data=[float(v) for v in target]))
+        self._hand_cmd = list(target)
+        print(f'[inhand-policy] hand 보간 [{label}] 완료', flush=True)
 
     def halted(self) -> bool:
         with self._lock:
@@ -232,56 +270,7 @@ def _run_and_wait(cmd, label, stdin_text=None, cwd=None):
     return proc.returncode
 
 
-def run_hand_goto(side):
-    _run_and_wait(
-        ['/usr/bin/python3', HAND_GOTO, '--side', side,
-         '--ramp-secs', GOTO_RAMP_SECS, '--target', *MANUAL_TARGET],
-        'hand_goto_target.py', cwd=str(SKILL_ROOT))
-
-
-def run_hand_squeeze(side):
-    label = f'hand_manual_squeeze.py --side {side}'
-    print(f'[inhand-policy] launching {label}', flush=True)
-    proc = subprocess.Popen(
-        ['/usr/bin/python3', HAND_SQUEEZE, '--side', side,
-         '--joints', *[str(j) for j in SQUEEZE_JOINTS]],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=str(SKILL_ROOT))
-    ready = threading.Event()
-
-    def _reader():
-        for line in proc.stdout:
-            sys.stdout.write(f'    [squeeze] {line}')
-            sys.stdout.flush()
-            if 'commands:' in line or 'squeeze step=' in line:
-                ready.set()
-
-    threading.Thread(target=_reader, daemon=True).start()
-    try:
-        ready.wait(timeout=SQUEEZE_READY_TIMEOUT)
-        if proc.poll() is not None:
-            print('[inhand-policy] squeeze 노드 조기 종료', file=sys.stderr)
-            return proc.returncode
-        time.sleep(SQUEEZE_STARTUP_WAIT)
-        for i in range(SQUEEZE_PRESSES):
-            print(f'[inhand-policy] squeeze {i + 1}/{SQUEEZE_PRESSES} ({SQUEEZE_KEY})',
-                  flush=True)
-            proc.stdin.write(f'{SQUEEZE_KEY}\n')
-            proc.stdin.flush()
-            time.sleep(SQUEEZE_INTERVAL)
-        proc.stdin.write('quit\n')
-        proc.stdin.flush()
-        proc.stdin.close()
-        proc.wait()
-    except (KeyboardInterrupt, BrokenPipeError):
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-        raise
-    return proc.returncode
-
+# (구) run_hand_goto / run_hand_squeeze — 2026-08-16 OPEN/REGRIP 보간으로 대체돼 제거
 
 # ───────────────────────────────────────────────────────────────────────────
 def run_policy_chain(node, bridge: PolicyBridge, policy: PolicyProc,
@@ -323,10 +312,16 @@ def run_policy_chain(node, bridge: PolicyBridge, policy: PolicyProc,
         time.sleep(0.5)
         policy.stop()
 
-    node.get_logger().info(f'정책 {duration_s:.0f}s 완료 → 재파지 마무리(goto+squeeze)')
-    # 5) 살짝 폈다 다시 잡기: manual target 으로 서서히 이동 → 오므리기
-    run_hand_goto(side)
-    run_hand_squeeze(side)
+    node.get_logger().info(
+        f'정책 {duration_s:.0f}s 완료 → 마무리: OPEN {HAND_RAMP_S:.0f}s 보간 → REGRIP 쥐기')
+    # 5) 마무리 (2026-08-16 사용자 지정): mode 1 그대로 살짝 폈다가 다시 쥔다.
+    #    시작점 = 측정 hand state (정책이 남긴 홀드 자세).
+    bridge.pub_mode.publish(Int32(data=1))     # 단계 관례: Position 재확인 (1→1)
+    time.sleep(0.1)
+    bridge.hand_ramp(HAND_OPEN_AFTER_POLICY, HAND_RAMP_S, '살짝 펴기 (OPEN)')
+    time.sleep(0.3)
+    bridge.hand_ramp(HAND_REGRIP_AFTER_OPEN, HAND_RAMP_S, '다시 쥐기 (REGRIP)')
+    # (구) run_hand_goto(side); run_hand_squeeze(side) — OPEN/REGRIP 보간으로 대체
 
 
 def main():

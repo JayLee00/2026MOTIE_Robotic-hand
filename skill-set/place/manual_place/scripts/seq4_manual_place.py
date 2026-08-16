@@ -532,17 +532,24 @@ def run_sequence(node: Seq4ManualPlace, slot: int, args):
     _log(f"진입 arm state 저장: {['%.4f' % v for v in saved_arm]}")
     _log(f"진입 hand state 저장: {saved_hand}")
 
-    # 1-1) 더 꽉 쥐기: 지정 관절 +delta (mode 1 그대로)
-    tighten = list(saved_hand)
-    for j1 in HAND_EXTRA_GRIP_JOINTS_1IDX:
-        tighten[j1 - 1] += grip_delta
+    # 1-1) (2026-08-16 사용자 지정) place 시작 그립: 열었다가 place 전용 그립으로 재파지.
+    #  stiffness 가 남긴 파지를 그대로 쓰지 않고, OPEN(릴리즈 타겟과 동일 자세)으로 2s
+    #  벌린 뒤 Hand_target_for_only_place 로 다시 쥔다 — 매 체인 반복 가능한 파지 확보.
     node._hand_cmd = list(saved_hand)      # 보간 시작점 = 저장한 hand state
     node.send_hand(saved_hand)             # 시드 (best_effort ×2)
     node.sleep_spin(0.05)
     node.send_hand(saved_hand)
     node.sleep_spin(0.05)
-    node.hand_ramp(tighten, HAND_EXTRA_GRIP_RAMP_S, f"더 꽉 쥐기 (+{grip_delta} counts)")
+    node.hand_ramp(HAND_RELEASE_TARGET, 2.0, "place 전 열기 (OPEN)")
     node.sleep_spin(0.3)
+    node.hand_ramp(Hand_target_for_only_place, HAND_PLACE_GRIP_RAMP_S,
+                   "place 전용 그립으로 쥐기 (Hand_target_for_only_place)")
+    node.sleep_spin(0.3)
+    # (구) 진입 파지에서 +delta 더 꽉 쥐기 — 위 OPEN→전용그립 재파지로 대체, 참고 보존
+    # tighten = list(saved_hand)
+    # for j1 in HAND_EXTRA_GRIP_JOINTS_1IDX:
+    #     tighten[j1 - 1] += grip_delta
+    # node.hand_ramp(tighten, HAND_EXTRA_GRIP_RAMP_S, f"더 꽉 쥐기 (+{grip_delta} counts)")
 
     _place_motion(node, slot, speed, release_ramp)
 

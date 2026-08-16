@@ -369,7 +369,11 @@ class Pipeline:
         self._check("paxini_raw", self._check_paxini_raw)                         # 제어 PC 소유
         self._check("inhand_policy_inputs", self._check_inhand_inputs)            # 제어 PC 소유
         self._check("move_group", self.ensure_twin, auto_startable=True)          # 러너가 기동
-        self._check("model_services", self.ensure_services, auto_startable=True)  # 러너가 기동
+        if self._place_manual():
+            self.log("place 수동 체인 모드 (stages.place.command 설정됨) — "
+                     "vision place 서버·모델 서비스 5종 불필요, 점검 생략")
+        else:
+            self._check("model_services", self.ensure_services, auto_startable=True)  # 러너가 기동
 
         if self.args.dry_run:
             self.log.rule("PREFLIGHT 결과")
@@ -585,7 +589,15 @@ class Pipeline:
             time.sleep(5.0)
         raise StageError(f"모델 서비스 기동 타임아웃: {still}\n{p.tail(40)}")
 
+    def _place_manual(self) -> bool:
+        """place 단계에 command 가 있으면 수동 티칭 체인 모드 — vision 서버 불필요."""
+        return bool((self.cfg["stages"].get("place") or {}).get("command"))
+
     def start_place_server(self):
+        if self._place_manual():
+            self.log("place 수동 체인 모드 — vision place 서버를 띄우지 않는다 "
+                     "(seq4_manual_place --chain 이 단계 진입 시 spawn 됨)")
+            return None
         if "place" in self.args.skip:
             self.log("place 단계 skip — place 서버를 띄우지 않는다", "WARN")
             return None
