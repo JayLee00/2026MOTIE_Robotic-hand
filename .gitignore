@@ -23,6 +23,10 @@ skill-set/place/anyplace/weight/
 skill-set/in-hand-reorientation/kist_deploy_pkg/1_policy/torch_cache/
 skill-set/in-hand-reorientation/kist_deploy_pkg/2_fruit_pose/foundation_pose/weights/
 
+# ── 데모 영상 산출물 (수백 MB — 스크립트만 커밋) ────────────
+Video/*.mp4
+Video/tmp/
+
 # ── 과거 실행 산출물 (스킬별) ────────────────────────────────
 skill-set/in-hand-reorientation/real_out/
 skill-set/in-hand-reorientation/real_out_sam2/
