@@ -773,6 +773,11 @@ class Pipeline:
             self.log("--dry-run: preflight 까지만 수행하고 종료한다 (로봇 미동작)")
             return 0
 
+        # 핸드 명령 블랙박스 — sync 포함 이후 모든 핸드 명령을 기록 (사고 포렌식)
+        hcl = self.cfg["services"].get("hand_cmd_logger")
+        if hcl:
+            self.pool.add(Proc("hand_cmd_logger", fill(hcl, self.ctx),
+                               self.logdir / "hand_cmd.log", self.log))
         self.run_sync_target()
         self.start_place_server()
         self.start_place_logger()

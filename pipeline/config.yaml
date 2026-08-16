@@ -91,6 +91,10 @@ services:
   # /place/status 이벤트 로거 (선택)
   place_logger: /usr/bin/python3 -u {root}/tools/diagnostics/place_logger.py
 
+  # 핸드 명령 블랙박스 — cmd_mode/cmd_servo/q_target 전건 기록 (런어웨이 사고 포렌식).
+  # 체인 시작 시 자동 기동, logs/run_*/hand_cmd.log. Voltage 중 counts 급 타겟 = ALERT.
+  hand_cmd_logger: /usr/bin/python3 -u {root}/tools/diagnostics/hand_cmd_logger.py
+
   # 체인 시작 직전 state→target 동기화 — 이전 실행이 남긴 스테일 latched 타겟과
   # 현재 자세의 차이가 크면 임피던스 로봇이 튄다. arm=goto_q(현재=목표, 이동 0),
   # hand=측정 counts 를 q_target 으로 재발행(움직임 없음). --no-sync-target 으로 끔.
