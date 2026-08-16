@@ -606,6 +606,35 @@ class Pipeline:
         cmd = fill(self.cfg["services"]["place_logger"], self.ctx)
         return self.pool.add(Proc("place_logger", cmd, self.logdir / "place_logger.log", self.log))
 
+    def run_sync_target(self):
+        """체인 시작 직전 state→target 동기화 (블로킹).
+
+        이전 실행이 남긴 스테일 latched 타겟과 현재 자세가 크게 다르면 임피던스
+        로봇이 서보-온/제어 사이클 순간 튄다. arm 은 goto_q(현재=목표 — 이동 0),
+        hand 는 측정 counts 재발행으로 재앵커한다. 실패 = 점프 위험이므로 중단.
+        """
+        template = self.cfg["services"].get("sync_target")
+        if not template:
+            return
+        if self.args.no_sync_target:
+            self.log("--no-sync-target — state→target 동기화 생략", "WARN")
+            return
+        self.log.rule("state → target 동기화 (스테일 타겟 점프 방지)")
+        cmd = fill(template, self.ctx)
+        self.log(f"명령: {cmd}")
+        p = self.pool.add(Proc("sync_target", cmd, self.logdir / "sync_target.log", self.log))
+        deadline = time.time() + self.cfg["timeouts_s"].get("sync_target", 150)
+        while time.time() < deadline and p.alive():
+            time.sleep(0.5)
+        if p.alive():
+            p.stop()
+            raise StageError("state→target 동기화 타임아웃 — 스테일 타겟 점프 위험, 중단\n"
+                             + p.tail(20))
+        if p.returncode() != 0:
+            raise StageError(f"state→target 동기화 실패 (rc={p.returncode()}) — "
+                             "스테일 타겟 점프 위험, 중단\n" + p.tail(20))
+        self.log("state→target 동기화 완료 ✓ (arm + hand 재앵커)")
+
     def start_fruit_viz(self):
         """과일 6DoF 오버레이(FoundationPose 3D bbox) — seq 2 데모 화면.
 
@@ -744,6 +773,7 @@ class Pipeline:
             self.log("--dry-run: preflight 까지만 수행하고 종료한다 (로봇 미동작)")
             return 0
 
+        self.run_sync_target()
         self.start_place_server()
         self.start_place_logger()
         self.start_fruit_viz()
@@ -780,6 +810,8 @@ def parse_args(cfg: dict):
                    help="MoveIt 트윈: auto=없으면 기동(기본), off=이미 떠 있어야 함")
     p.add_argument("--no-fruit-viz", action="store_true",
                    help="과일 6DoF 오버레이(FoundationPose 3D bbox 창)를 띄우지 않는다")
+    p.add_argument("--no-sync-target", action="store_true",
+                   help="체인 시작 전 state→target 동기화를 생략한다 (점프 위험 감수)")
     p.add_argument("--inhand-legacy", action="store_true",
                    help="seq 2 를 기존 HDF5 궤적 재생(inhand_sequence_2.py)으로 되돌린다 "
                         "(기본: VTDP 학습 정책)")

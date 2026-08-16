@@ -45,6 +45,7 @@ timeouts_s:
   place_server_ready: 300
   twin_ready: 180
   fruit_viz_ready: 300  # FoundationPose 서버 모델 로드 (첫 실행은 JIT 컴파일로 더 걸릴 수 있음)
+  sync_target: 150      # state→target 동기화 (arm goto_q 플랜 포함)
 
 # 강성 모델이 지원하는 과일 → deploy_task3_ros2.py 의 stdin 번호
 # ⚠ 모델에 orange 가 없어 감귤류인 lemon 으로 대용한다. 데모 과일이 바뀌면 여기를 바꾼다.
@@ -89,6 +90,11 @@ services:
 
   # /place/status 이벤트 로거 (선택)
   place_logger: /usr/bin/python3 -u {root}/tools/diagnostics/place_logger.py
+
+  # 체인 시작 직전 state→target 동기화 — 이전 실행이 남긴 스테일 latched 타겟과
+  # 현재 자세의 차이가 크면 임피던스 로봇이 튄다. arm=goto_q(현재=목표, 이동 0),
+  # hand=측정 counts 를 q_target 으로 재발행(움직임 없음). --no-sync-target 으로 끔.
+  sync_target: /usr/bin/python3 -u {root}/tools/sync_target.py
 
   # 과일 6DoF 오버레이 — FoundationPose+SAM2 로 과일 3D bbox 를 realsense 화면에 표시.
   # seq 2(손 안 조작) 데모 화면용. 등록(과일 락)에 시간이 걸려 체인 시작 시 미리 띄운다.
