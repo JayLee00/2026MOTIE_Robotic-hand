@@ -103,8 +103,15 @@ DESCENT_TIME = 4.0
 # "open/extend" direction (hardware-confirmed by the operator), so +60 gently OPENS these
 # joints. Kept tiny on purpose ("아주 살살"); the backend hard-caps every published duty to
 # RELEASE_DUTY_ABS_MAX so a mistuned constant can never drive the hand hard. Firmware range ±2100.
-RELEASE_DUTY = [0, 0, 60, 60,   0, 60, 60, 60,
-                0, 60, 60, 60,   0, 60, 60, 60]
+# RELEASE_DUTY = [0, 0, 60, 60,   0, 60, 60, 60,
+#                 0, 60, 60, 60,   0, 60, 60, 60]
+#
+# ── 2026-08-16 변경: Voltage(mode 0) 진입 봉인 ────────────────────────────────
+# 런어웨이 사고(외부發 mode 0 + counts 오해석) 이후, release 를 Voltage duty 가 아니라
+# **Position(mode 1) 오픈 자세**로 수행한다. 위 RELEASE_DUTY 는 참고용 주석 보존.
+# 아래 값은 사용자가 지정한 "놓을 때" encoder counts (thumb×4, index×4, middle×4, ring×4).
+RELEASE_OPEN_COUNTS = [4096, -4096, 0, 0,   0, 1000, 1000, 1000,
+                       0, 1000, 1000, 1000,   0, 1000, 1000, 1000]
 ASCENT_SPEED = 0.02        # m/s — slow release ascent (Cartesian)
 RETRACT_SPEED = 0.08       # m/s — normal-speed linear retract to the waypoint
 
@@ -280,18 +287,14 @@ class PlacePipeline:
         monitor, wp = ctx["monitor"], ctx["wp"]
         R["stop_reason"] = ctx["stop_reason"]
 
-        # From here the hand may be in VOLTAGE mode. EVERY exit path — normal, exception, or
-        # KeyboardInterrupt — must go through [R5] (back to Position + servo OFF), so the whole
-        # block is a try/finally. Without it an escape between R1 and R5 would leave the hand in
-        # Voltage; the skill server keeps running (it catches per-run exceptions and waits for the
-        # next fruit), so the process-exit safety net in ros_backend would never fire and the NEXT
-        # stage's Position counts would be read as raw duty -> runaway.
+        # 2026-08-16: release 는 이제 Position(mode 1) 오픈 자세다 — Voltage 진입 없음.
+        # 그래도 [R5](servo OFF 정리)는 모든 탈출 경로에서 실행되도록 try/finally 유지.
         try:
-            # [R1] Release motion: Voltage mode + weakly open the fingers (safe switch sequence).
-            self._status("물체 놓기(release) 시작 - 손가락 약하게 개방")
-            self.log(f"[R1] release: Voltage-mode weak-open, duty={RELEASE_DUTY}")
+            # [R1] Release motion: Position 모드 그대로 오픈 자세 counts 를 보낸다 (mode 전환 없음).
+            self._status("물체 놓기(release) 시작 - 손가락 개방 (Position 오픈 자세)")
+            self.log(f"[R1] release: Position-mode open counts={RELEASE_OPEN_COUNTS}")
             try:
-                self.b.hand_release_sequence(RELEASE_DUTY)
+                self.b.hand_release_sequence(RELEASE_OPEN_COUNTS)
             except Exception as e:                                         # noqa: BLE001
                 self.log(f"[R1] hand release command failed ({type(e).__name__}: {e})")
 
@@ -336,9 +339,9 @@ class PlacePipeline:
             except Exception as e:                                         # noqa: BLE001
                 self.log(f"[R4] parent_pose move failed ({type(e).__name__}: {e})")
         finally:
-            # [R5] leave the hand SAFE for the NEXT run: zero the Voltage drive, return to POSITION
-            # mode + servo OFF. If a run ends in Voltage mode, the next run's position targets
-            # (counts) are read as raw duty -> the hand runs away. servo-OFF-first switch.
+            # [R5] leave the hand SAFE for the NEXT run: servo OFF + Position 모드 재확인.
+            # (2026-08-16: Voltage 를 더 이상 쓰지 않으므로 duty 청소는 없음 — 오픈 자세
+            # counts 가 래치된 채 servo 만 내린다. 다음 체인의 파지가 재무장.)
             try:
                 self.b.hand_safe_shutdown()
             except Exception as e:                                         # noqa: BLE001

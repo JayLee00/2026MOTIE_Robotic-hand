@@ -676,37 +676,41 @@ class RosBackend:
         self._hand_hold_stop.set()
         t.join(timeout=timeout)
 
-    def hand_release_sequence(self, duty16, settle=0.3):
-        """Switch the hand Position->Voltage SAFELY (DUAL_ARM_HAND_CTRL.md rule 3: no mode
-        hot-switch — servo OFF -> set mode -> seed safe target -> servo ON) and then apply the
-        weak-open duty. duty16 = 16 PWM duties (+-2100); republished once for best-effort."""
-        from std_msgs.msg import Float32MultiArray, Bool, Int32
-        self.hand_hold_stop()                         # stop streaming COUNTS before Voltage mode
-        self._hand_in_voltage = True                  # arm the exit safety net (restore on abnormal exit)
+    def hand_release_sequence(self, counts16, settle=0.3):
+        """(2026-08-16 변경) Position(mode 1) 오픈 자세로 release — Voltage(mode 0) 진입 봉인.
 
-        def servo(on):
-            mm = Bool(); mm.data = bool(on); self._hand_servo_pub.publish(mm)
+        런어웨이 사고 이후 mode 0 은 place 에서 절대 쓰지 않는다. 모드 전환이 없으므로
+        servo 도 켠 채 그대로 두고, 홀드 스트리밍만 끊은 뒤 오픈 자세 counts 를 보낸다
+        ('타겟 하나만' 원칙). counts16 = 오픈 자세 encoder counts (무손실 검증만, 클램프 없음)."""
+        from std_msgs.msg import Float32MultiArray, Int32
+
+        self.hand_hold_stop()                         # 홀드 counts 스트리밍 중단 (경합 방지)
 
         def mode(v):
             mm = Int32(); mm.data = int(v); self._hand_mode_pub.publish(mm)
 
-        def duty(v):
-            mm = Float32MultiArray(); mm.data = _safe_duty16(v)   # sanitise + hard-clamp (runaway guard)
+        def qtar(v):
+            mm = Float32MultiArray(); mm.data = list(v)
             self._hand_qtar_pub.publish(mm)
 
-        # 2026-08-16 전환 프로토콜(사용자 지정, HAND_SWITCH_TICK_MS 참조):
-        #   [mode1/servoON/counts 유지] → servoOFF → mode0 → duty(pwm 목표) → servoON
-        # 명령 하나당 한 틱(0.05s). 모드 변경은 servo OFF 창 안에서만 일어난다.
-        # servo ON 순간 래치돼 있는 target 이 (스테일 counts 가 아니라) 클램프된
-        # 목표 duty 임을 off-창 안의 duty 시딩 ×2 가 보장한다 (best_effort 유실 대비).
-        safe = _safe_duty16(duty16)                   # validate/clamp ONCE up front (raises on bad length)
+        safe = _safe_counts16(counts16)               # 길이/유한값 검증 (counts 는 클램프 없음)
+        if safe is None:
+            raise ValueError(f"release counts16 이 유효하지 않다: {counts16}")
         tick = HAND_SWITCH_TICK_MS
-        servo(False); self._spin_ms(tick)             # ① servo OFF — 전환 창 열기
-        mode(HAND_MODE_VOLTAGE); self._spin_ms(tick)  # ② 0 = Voltage (off 창 안)
-        duty(safe); self._spin_ms(tick)               # ③ pwm 목표값 시딩 (off 창 안, ±500 클램프)
-        duty(safe); self._spin_ms(tick)               #    재발행 (q_target 은 best_effort)
-        servo(True); self._spin_ms(int(settle * 1000))  # ④ servo ON — 목표 duty 로 약하게 벌림
-        duty(safe); self._spin_ms(tick)               # 재확인 발행 (유실 대비)
+        mode(HAND_MODE_POSITION); self._spin_ms(tick)   # 1 재확인 (1→1, 전환 아님 — 무해)
+        qtar(safe); self._spin_ms(tick)                 # 오픈 자세 counts (best_effort ×2)
+        qtar(safe); self._spin_ms(int(settle * 1000))   # 손가락 열리는 시간 대기
+        qtar(safe); self._spin_ms(tick)                 # 재확인 발행 (유실 대비)
+
+        # ── 구 Voltage 경로 (봉인 — 참고 보존) ────────────────────────────────
+        # self._hand_in_voltage = True
+        # safe = _safe_duty16(duty16)
+        # servo(False); self._spin_ms(tick)             # ① servo OFF — 전환 창 열기
+        # mode(HAND_MODE_VOLTAGE); self._spin_ms(tick)  # ② 0 = Voltage (off 창 안)
+        # duty(safe); self._spin_ms(tick)               # ③ duty 시딩 ×2
+        # duty(safe); self._spin_ms(tick)
+        # servo(True); self._spin_ms(int(settle * 1000))
+        # duty(safe); self._spin_ms(tick)
 
     def hand_relax(self):
         """Zero all duties (fingers limp, no drive) — left state after retract."""
@@ -735,15 +739,16 @@ class RosBackend:
             mm = Float32MultiArray(); mm.data = _safe_duty16(v)
             self._hand_qtar_pub.publish(mm)
 
-        # 2026-08-16 복귀(역순) 프로토콜: duty0 → servoOFF → mode1, 한 틱(0.05s)씩.
-        # 모드 변경은 servo OFF 창 안에서만. servo 는 설계상 OFF 로 남긴다
-        # (다음 체인의 파지 단계가 재무장 — 여기서 켜면 스테일 counts 로 구동할 위험).
+        # 2026-08-16(2차): Voltage 를 더 이상 쓰지 않으므로 duty 청소를 하지 않는다 —
+        # Position 모드에서 0 타겟을 쏘면 손이 0 counts 자세로 '움직여' 버린다.
+        # 오픈 자세 counts 가 래치된 채 servo 만 내리고 mode 1 을 재확인한다.
         tick = HAND_SWITCH_TICK_MS
-        duty([0.0] * 16); self._spin_ms(tick)         # ① Voltage 드라이브 0 → limp
-        duty([0.0] * 16); self._spin_ms(tick)         #    재발행 (best_effort)
-        servo(False); self._spin_ms(tick)             # ② servo OFF — 전환 창 열기
-        mode(HAND_MODE_POSITION); self._spin_ms(tick) # ③ 1 = Position (off 창 안)
-        servo(False); self._spin_ms(tick)             # ④ servo OFF 확인 재발행 — OFF 로 종료
+        servo(False); self._spin_ms(tick)             # ① servo OFF — 다음 체인이 재무장
+        mode(HAND_MODE_POSITION); self._spin_ms(tick) # ② 1 = Position 재확인 (1→1)
+        servo(False); self._spin_ms(tick)             # ③ servo OFF 확인 재발행 — OFF 로 종료
+        # (구 Voltage 시절 duty 청소 — 봉인 보존)
+        # duty([0.0] * 16); self._spin_ms(tick)
+        # duty([0.0] * 16); self._spin_ms(tick)
         self._hand_in_voltage = False                 # restored -> exit safety net becomes a no-op
 
     def _arm_hand_safety_net(self):
