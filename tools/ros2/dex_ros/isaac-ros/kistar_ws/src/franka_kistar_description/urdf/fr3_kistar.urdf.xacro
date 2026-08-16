@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot name="fr3" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find franka_description)/robots/common/franka_robot.xacro"/>
+
+  <xacro:arg name="arm_prefix"          default=""/>
+  <xacro:arg name="ros2_control"        default="true"/>
+  <xacro:arg name="robot_ip"            default=""/>
+  <xacro:arg name="use_fake_hardware"   default="false"/>
+  <xacro:arg name="fake_sensor_commands" default="false"/>
+  <xacro:property name="arm_id" value="fr3"/>
+  <xacro:property name="flange_link" value="${arm_prefix_val + arm_id + '_link8'}"/>
+
+  <xacro:franka_robot
+      arm_id="fr3"
+      joint_limits="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/joint_limits.yaml')}"
+      inertials="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/inertials.yaml')}"
+      kinematics="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/kinematics.yaml')}"
+      accelerometer_config="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/accelerometers.yaml')}"
+      dynamics="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/dynamics.yaml')}"
+      gazebo="false"
+      hand="false"                
+      ee_id="none"                
+      special_connection=""
+      xyz_ee="0 0 0"
+      rpy_ee="0 0 0"
+      tcp_xyz="0 0 0.1034"
+      tcp_rpy="0.0 0 0"
+      safety_distance="0.03"
+      with_sc="false"
+      ros2_control="$(arg ros2_control)"
+      robot_ip="$(arg robot_ip)"
+      use_fake_hardware="$(arg use_fake_hardware)"
+      fake_sensor_commands="$(arg fake_sensor_commands)"
+      gazebo_effort="false"
+      no_prefix="false"
+      arm_prefix="$(arg arm_prefix)"
+      description_pkg="franka_description"
+      connected_to="base" />
+
+  <xacro:include filename="$(find franka_kistar_description)/urdf/kistar_hand_macro.xacro"/>
+  <xacro:kistar_hand prefix=""/>
+
+  <joint name="kistar_hand_mount" type="fixed">
+    <parent link="fr3_link8"/>
+    <child  link="kistar_hand"/>
+    <origin xyz="0 0 0" rpy="0 0 2.355"/>
+  </joint>
+</robot>

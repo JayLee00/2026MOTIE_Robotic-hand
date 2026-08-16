@@ -1,0 +1,8 @@
+# 제어권 요청: 동작 seq_id를 시작하기 위해 client_id가 제어권을 요청.
+# 이미 다른 owner가 있으면 granted=false. 같은 client의 재요청은 갱신(하트비트 겸용).
+int32 client_id     # 0이 아닌 고유 id (PC/모듈별 배정)
+int32 seq_id        # 시작할 동작 번호
+---
+bool granted
+int32 current_owner # 거부 시 현재 소유자
+string message

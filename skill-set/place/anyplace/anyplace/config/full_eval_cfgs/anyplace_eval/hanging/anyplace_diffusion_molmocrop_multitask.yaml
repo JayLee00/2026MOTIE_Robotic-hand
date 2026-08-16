@@ -1,0 +1,63 @@
+inherit_from: base.yaml
+experiment:
+    experiment_name: anyplace_diffusion_molmocrop_multitask_hanging_eval 
+    num_iterations: 50
+    meshcat_on: False
+    pybullet_viz: False
+    is_parent_shapenet_obj: False
+    is_child_shapenet_obj: True
+    n_parent_instances: 4
+    parent_crop: True
+    show_floating_hand_meshcat: False
+    use_floating_hand_execution: False
+    eval:
+        pose_refine_model_name: anyplace_diffusion_molmocrop_multitask_hanging_eval
+        obj_path: $PATH_TO_EVAL_DATASET/eval_dataset/obj_model                                   # UPDATE THIS
+        ckpt_path: $PATH_TO_CHECKPOINT                                                           # UPDATE THIS
+        eval_dataset_path: $PATH_TO_EVAL_DATASET/eval_dataset/task_gpp_hanging/hanging           # UPDATE THIS
+        use_molmo: True  
+        remove_redundant_pose: False
+        model_type: anyplace_diffusion_molmocrop
+        model_name: anyplace_diffusion_molmocrop_multitask
+        rand_mesh_scale: False
+        parent_load_pose_type: random_upright
+        child_load_pose_type: random_upright
+        inference_method: multistep_regression_scene
+        return_rand: False
+        with_coll: False
+        n_refine_iters: 50
+        init_orig_ori: False
+        init_k_val: 20
+        no_success_classifier: True
+        variable_size_crop: True
+        timestep_emb_decay_factor: 20  # larger values emphasize quicker decay toward using timestep 0 (more precise, more local)
+        add_per_iter_noise: True
+        per_iter_noise_kwargs:
+            rot:
+                angle_deg: 20 
+                rate: 6.5
+            trans:
+                trans_dist: 0.03 
+                rate: 5.5
+
+model:
+    refine_pose:
+        type: nsm_transformer
+        feat_dim: 3
+        model_kwargs:
+            nsm_transformer:
+                n_queries: 1
+                use_timestep_emb: False
+                max_timestep:  
+                timestep_pool_method: meanpool  # meanpool, concat
+
+environment:
+    n_cameras: 4
+    cameras:
+        yaw_angles: [45.0, 135.0, 225.0, 315.0]
+        distance: 1.0
+        pitch: -25.0
+        focus_pt: [0.5, 0.0, 1.4]
+        single_focus_pt: True
+        single_pitch: True
+

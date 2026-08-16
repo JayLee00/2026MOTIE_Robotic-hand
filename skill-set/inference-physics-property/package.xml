@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>stiffness_deploy_ros2</name>
+  <version>0.1.0</version>
+  <description>
+    deploy.py(SHM 직접 제어)의 모션 시퀀스·힘 판정·강성 추론 로직을 그대로 재사용하되,
+    I/O 계층만 Dual_Arm_Hand_Ctrl 워크스페이스의 ROS2 토픽으로 치환해 실행하는 브리지.
+    통합 워크스페이스(src/)에 넣고 rosdep 으로 의존성을 받은 뒤 deploy_ros2.py 를 실행한다.
+  </description>
+
+  <maintainer email="damilab.knu@gmail.com">Yesol</maintainer>
+  <license>Proprietary</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- 런타임 ROS2 의존성 (rosdep 로 설치) -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+  <!-- 데이터 수집/변환 파이프라인 (bag_to_hdf5) -->
+  <exec_depend>rosbag2_py</exec_depend>
+  <exec_depend>rosidl_runtime_py</exec_depend>
+  <!-- MoveIt 끝점 이동 모듈 (moveit_arm_mover, Option B: /move_action plan-only) -->
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+
+  <!-- 런타임 Python 의존성 (rosdep 키) -->
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <!-- torch/sysv_ipc 는 배포판 rosdep 키가 불안정하므로 requirements.txt(pip) 로 설치 -->
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

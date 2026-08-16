@@ -1,0 +1,20 @@
+# 개체별 강성 (리그 측정, 국소기울기 3지점평균). 자동생성.
+normalize_per_fruit:
+  tomato: {min: 0.0, max: 6.06}
+specimens:
+  tomato_1: {stiffness: 3.9244, std: 0.5666, n_points: 3}
+  tomato_2: {stiffness: 2.7098, std: 0.3765, n_points: 3}
+  tomato_3: {stiffness: 2.4361, std: 0.608, n_points: 3}
+  tomato_4: {stiffness: 3.1366, std: 0.1779, n_points: 3}
+  tomato_5: {stiffness: 4.0431, std: 0.6535, n_points: 3}
+  tomato_6: {stiffness: 1.29, std: 0.2346, n_points: 3}
+  tomato_7: {stiffness: 3.1442, std: 0.4879, n_points: 3}
+  tomato_8: {stiffness: 2.161, std: 0.4399, n_points: 3}
+  tomato_9: {stiffness: 2.2499, std: 0.3748, n_points: 3}
+  tomato_10: {stiffness: 2.9093, std: 0.2655, n_points: 3}
+  tomato_11: {stiffness: 3.5877, std: 0.8235, n_points: 3}
+  tomato_12: {stiffness: 1.4423, std: 0.1854, n_points: 3}
+  tomato_13: {stiffness: 2.4959, std: 0.5978, n_points: 3}
+  tomato_14: {stiffness: 3.7768, std: 0.3707, n_points: 3}
+  tomato_15: {stiffness: 2.9885, std: 0.3018, n_points: 3}
+  tomato_16: {stiffness: 3.9984, std: 0.2102, n_points: 3}

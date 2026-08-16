@@ -1,0 +1,26 @@
+# 과일별 힘 임계값 [N] — deploy.py / deploy_task3.py (및 각 _ros2 버전)가 로드.
+#
+#   grip    : 파지 접촉력 threshold. 직접 파지하는 deploy / deploy_ros2 만 사용.
+#             (task3 계열은 이미 파지한 상태로 시작하므로 grip 은 사용하지 않음)
+#   squeeze : 스퀴즈 정지력 threshold (thumb). 전 파일 공통 사용.
+#
+# 과일이 아래 fruits 에 없거나 grip/squeeze 키가 빠지면 default 값을 사용한다.
+# 값을 바꾸면 재빌드 없이(직접 실행) 즉시 반영된다. (colcon 설치본은 재빌드/설치 필요)
+
+default:
+  grip: 7.0
+  squeeze: 10.0
+
+fruits:
+  tomato:
+    grip: 7.0
+    squeeze: 10.0
+  plum:
+    grip: 5.0
+    squeeze: 8.0
+  kiwi:
+    grip: 10.0
+    squeeze: 13.0
+  lemon:
+    grip: 7.0
+    squeeze: 12.0

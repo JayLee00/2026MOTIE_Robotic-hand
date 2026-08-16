@@ -1,0 +1,12 @@
+# Per-object shape map, keyed by object_id (the semantic class name used in the
+# segmentation_labels_*.json sidecar, e.g. "soldering_tool", "apple").
+#
+# Filled by the calibration stage (Phase 0). Each entry:
+#   <object_id>:
+#     a:               <float>   # ellipsoid equatorial semi-axis (m)
+#     c:               <float>   # ellipsoid polar semi-axis (m)
+#     shape_class:     <str>     # e.g. "sphere" | "spheroid" | "ellipsoid"
+#     semantic_color:  "(r, g, b)"  # RGB string as it appears in the sidecar
+#
+# Seeded empty; calibration writes into this map.
+objects: {}

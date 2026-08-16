@@ -1,0 +1,29 @@
+# ── 실행 산출물 ──────────────────────────────────────────────
+logs/
+__pycache__/
+*.pyc
+.omc/
+.claude/
+snapshots/
+
+# ── colcon 빌드 산출물 (tools/ros2/build.sh 로 재생성) ──────
+tools/ros2/fr_ws/build/
+tools/ros2/fr_ws/install/
+tools/ros2/fr_ws/log/
+tools/ros2/dex_ros/**/build/
+tools/ros2/dex_ros/**/install/
+tools/ros2/dex_ros/**/log/
+
+# ── 중첩 git 저장소 백업 (외부 저장소 추적을 위해 비활성화한 원본) ──
+.git.disabled/
+
+# ── 대용량 가중치·데이터 (GitHub 100MB 제한 — 로컬/zip 으로 관리) ──
+*.pt
+skill-set/place/anyplace/weight/
+skill-set/in-hand-reorientation/kist_deploy_pkg/1_policy/torch_cache/
+skill-set/in-hand-reorientation/kist_deploy_pkg/2_fruit_pose/foundation_pose/weights/
+
+# ── 과거 실행 산출물 (스킬별) ────────────────────────────────
+skill-set/in-hand-reorientation/real_out/
+skill-set/in-hand-reorientation/real_out_sam2/
+skill-set/inference-physics-property/stiffness_deploy_ros2/logs/

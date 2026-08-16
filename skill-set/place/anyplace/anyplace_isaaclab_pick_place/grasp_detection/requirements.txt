@@ -1,0 +1,9 @@
+torch==1.10.1
+tensorboard==2.3
+numpy==1.23.5
+scipy
+open3d>=0.8,<0.15.0
+Pillow<10
+tqdm
+trimesh<4
+usd-core

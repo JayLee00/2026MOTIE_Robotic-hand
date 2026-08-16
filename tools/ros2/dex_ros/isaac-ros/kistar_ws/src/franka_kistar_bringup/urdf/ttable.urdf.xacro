@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot name="ttable_env" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <material name="mid_gray">
+    <color rgba="0.55 0.55 0.55 1.0"/>
+  </material>
+  <material name="dark_gray">
+    <color rgba="0.20 0.20 0.20 1.0"/>
+  </material>
+  <material name="collision_red">
+    <color rgba="1.0 0.0 0.0 1.0"/>
+  </material>
+
+  <link name="ttable_link"/>
+
+  <link name="ttable_top">
+    <visual>
+      <!-- <origin xyz="-0.185 -0.8 -0.75" rpy="0 0 0"/> -->
+      <origin xyz="-0.815 -0.75 -0.955" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://franka_kistar_bringup/meshes/table/table.STL" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="dark_gray"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0.05 0. -0.35" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.5 0.75 0.7"/>
+      </geometry>
+      <material name="collision_red"/>
+    </collision>
+  </link>
+
+  <joint name="ttable_top_joint" type="fixed">
+    <parent link="ttable_link"/>
+    <child link="ttable_top"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+</robot>

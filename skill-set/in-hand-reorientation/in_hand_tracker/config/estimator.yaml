@@ -1,0 +1,53 @@
+# Estimator configuration (M2 placeholders + IO/segmentation knobs).
+
+# c/a aspect-ratio threshold: below this the object is treated as ~spherical
+# (axis-fixed fit collapses to a sphere); at/above it the spheroid axis matters.
+ca_threshold: 1.2
+
+# RANSAC for the axis-fixed ellipsoid fit (ellipsoid_fit center -> AC-10).
+ransac:
+  iters: 200
+  dist_thresh: 0.004          # inlier band (m) around the candidate surface
+  min_inlier_ratio: 0.6
+
+# Region of interest for cropping the point set before the fit (US-003).
+# The crop is a 3D axis-aligned workspace box centered on a hint point (object
+# GT region or camera-aim), expressed in the SAME frame as the cropped points.
+roi:
+  mode: fixed                 # "fixed" | "fk"
+  fixed:
+    # 3D box half-extent (meters); scalar -> isotropic, or [hx, hy, hz].
+    # An in-hand fruit/tool plus slack fits comfortably in ~15 cm.
+    half_extent: 0.15
+    # Optional explicit box center (world meters). When omitted, the center is
+    # resolved from hints: gt_object_pos -> cam_aim -> cam_pos -> point median.
+    # center: [0.0, 0.0, 0.0]
+  fk:
+    # Forward-kinematics ROI (optional; requires pinocchio + a KISTAR URDF).
+    # The URDF path is a RUNTIME input (set urdf_path here or pass via hints);
+    # it is intentionally NOT hardcoded in source. If pinocchio or the URDF is
+    # unavailable, roi_crop logs a warning and falls back to the fixed box.
+    enabled: false
+    urdf_path: null
+    margin_m: 0.05            # extra margin grown around the fingertip AABB (m)
+
+# Segmentation source.
+segmenter:
+  source: gt                  # "gt" (use recorded semantic_segmentation) | "sam2"
+  reseg_every_n: 30           # SAM2: re-seed the video predictor every N frames
+  sam2:
+    ckpt: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/in-hand-reorientation/sam2.1_hiera_tiny.pt
+    color_tolerance: 10       # BGR per-channel tolerance for GT color matching
+
+# Surface band: fraction of the radius used to keep near-surface points when
+# fitting (rejects interior / stray points).
+surface_band: 0.15
+
+# Camera->world extrinsic convention. The recorded datasets disagree:
+#   original soldering data -> "transposed"  (R_wc.T @ flip)
+#   regenerated fruit data  -> "literal"      (R_wc @ flip)
+# "auto" detects once per sequence from the GT object pose (the two land the
+# masked cloud ~0.8 m apart, so the choice is unambiguous). Set a fixed value
+# only for GT-less data where auto-detection cannot run.
+extrinsic:
+  convention: auto              # "auto" | "literal" | "transposed"

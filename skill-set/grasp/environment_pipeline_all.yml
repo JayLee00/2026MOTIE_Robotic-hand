@@ -1,0 +1,39 @@
+name: grasp_fruit
+# Grasp_fruit pipeline: Qwen2.5-VL + SAM3 + Top-down Grasp
+# Python 3.12, CUDA 12.8 (RTX 4090)
+#
+# Create:
+#   conda env create -f environment_pipeline_all.yml
+#   conda activate grasp_fruit
+#   bash setup_pipeline_all.sh --skip-conda
+
+channels:
+  - defaults
+
+dependencies:
+  - python=3.12
+  - pip
+
+  - pip:
+    # PyTorch — installed by setup_pipeline_all.sh (needs --index-url)
+
+    # Qwen2.5-VL + SAM3 (HuggingFace transformers)
+    - transformers>=4.50
+    - accelerate
+    - qwen-vl-utils
+    - timm>=1.0.17
+    - einops
+    - ftfy==6.1.1
+    - regex
+    - iopath>=0.1.10
+    - huggingface_hub
+    - tqdm
+
+    # Geometry / math
+    - "numpy>=1.26,<2"
+    - scipy
+    - pillow
+
+    # Pipeline I/O
+    - opencv-python
+    - matplotlib

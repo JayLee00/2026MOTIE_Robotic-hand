@@ -1,0 +1,17 @@
+FROM osrf/ros:humble-desktop
+
+# MoveIt2 + pick_ik + franka_description (apt)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ros-humble-moveit \
+        ros-humble-pick-ik \
+        ros-humble-franka-description \
+        python3-colcon-common-extensions \
+    && rm -rf /var/lib/apt/lists/*
+
+# 런치 파일 / 릴레이 노드를 이미지에 포함
+COPY scripts/launch_moveit.py        /ros2_moveit/launch_moveit.py
+COPY scripts/franka_joint_state_relay.py /ros2_moveit/franka_joint_state_relay.py
+COPY docker/entrypoint_moveit.sh     /entrypoint_moveit.sh
+RUN chmod +x /entrypoint_moveit.sh
+
+ENTRYPOINT ["/entrypoint_moveit.sh"]

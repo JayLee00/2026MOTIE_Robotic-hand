@@ -1,0 +1,6 @@
+# 제어권 반납: 동작 종료(E) 신호. owner 본인만 반납 가능.
+int32 client_id
+int32 seq_id
+---
+bool released
+string message

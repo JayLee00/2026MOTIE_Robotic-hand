@@ -1,0 +1,21 @@
+# deploy_ros2.py 실행에 필요한 pip 의존성.
+#   pip install -r requirements.txt
+#
+# ROS2(rclpy/sensor_msgs/std_msgs)는 apt/rosdep 로 설치한다 (package.xml 참고).
+# numpy/pyyaml 은 package.xml 의 rosdep 키로도 받을 수 있으나 pip 로도 받게 함께 명시.
+
+numpy
+pyyaml
+
+# collect_ros2.py (하이브리드 데이터 수집기)의 데모별 HDF5 기록용.
+#   설치:  pip install --user h5py   (env.sh 는 시스템 python + --user pip 규약)
+h5py
+
+# 강성 추론 모델(model.py, real_deploy_inference_old.py)에서 사용.
+# CUDA/CPU 빌드는 대상 장비의 환경에 맞춰 설치할 것. (버전은 학습 시점과 맞추는 것을 권장)
+torch
+
+# SHM 직접 접근 계층(core.shm_common / core.paxini_shm)용. ROS2 토픽 경로에서는
+# 실제로 attach 하지 않으므로 없어도 deploy_ros2 실행에는 지장 없음(지연 import).
+# SHM 유틸을 함께 쓰려면 주석 해제.
+# sysv_ipc

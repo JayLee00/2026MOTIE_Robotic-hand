@@ -1,0 +1,23 @@
+# 개체 ID -> 단단함 등급. stiffness + 과일별 경계로 파생. 자동생성.
+# 경계 바꾸려면 fruits.yaml 수정 후 재실행.
+n_classes: 3
+class_names: ['soft', 'mid', 'hard']
+boundaries_per_fruit:
+  tomato: [1.802, 3.5]
+specimens:
+  tomato_1: {class: 2, name: hard}
+  tomato_2: {class: 1, name: mid}
+  tomato_3: {class: 1, name: mid}
+  tomato_4: {class: 1, name: mid}
+  tomato_5: {class: 2, name: hard}
+  tomato_6: {class: 0, name: soft}
+  tomato_7: {class: 1, name: mid}
+  tomato_8: {class: 1, name: mid}
+  tomato_9: {class: 1, name: mid}
+  tomato_10: {class: 1, name: mid}
+  tomato_11: {class: 2, name: hard}
+  tomato_12: {class: 0, name: soft}
+  tomato_13: {class: 1, name: mid}
+  tomato_14: {class: 2, name: hard}
+  tomato_15: {class: 1, name: mid}
+  tomato_16: {class: 2, name: hard}

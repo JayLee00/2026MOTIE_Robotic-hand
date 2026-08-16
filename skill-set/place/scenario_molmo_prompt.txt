@@ -1,0 +1,5 @@
+비전 파이프라인 실행 명령어는 'scenario=', 'hand_pc=' 인자를 받는다. (Molmo(grasp)는 고정 프롬프트라 'grasp' 인자 없음)
+* Molmo(place): ('scenario'가 'table'일 경우) "Point to the center of the table"
+* Molmo(place): ('scenario'가 'fruit'일 경우) "Point to the molded fiber fruit tray" (잠시 사용 X)
+* Molmo(grasp): "Point to the object being held by the robot hand" (grasp 인자에 의존하지 않음, 고정)
+* Molmo(local_place): ('scenario'가 'fruit'인 경우만) "Point to all the empty holes in the molded fiber fruit tray where fruit can be inserted"

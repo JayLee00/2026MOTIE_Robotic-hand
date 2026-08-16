@@ -1,0 +1,639 @@
+ cy  ⎇  franka U:1  ⓔ base  ~/motie_ws/Topdown_Grasp_sja  130   /usr/bin/python3 scripts/run_scenario1_host.py     --calibration configs/calibration/extrinsic_20260612_170053.json     --execute_robot
+
+============================================================
+  Scenario 1 — Pick (시퀀스 제어권, 호스트/py3.10)
+  Pick 1회 성공 시 제어권 반납(DONE) → Inhand(2) 차례
+  'exit'/'quit'/'q' = Pick 취소(abort)
+============================================================
+
+[Scenario1] 제어권 획득 중 (Start)...
+
+  Query>  orange
+[Camera] 캡처 저장: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/raw/scenario1_000_000.npz
+
+[SAM3] 'orange' 검출 중 (grasp_fruit)...
+Image: scenario1_000_000  shape=(480, 640, 3)
+
+[1/1] SAM3  query='orange'
+  SAM3 loading: facebook/sam3
+Loading weights: 100%|████████████████████████| 1468/1468 [00:00<00:00, 3077.62it/s]
+  SAM3 loaded
+  Query: 'orange'
+  OK: 'orange'  score=0.918  mask_px=6115
+
+Saved mask: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_mask.png
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_overlay.png
+Saved JSON:  /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_sam3.json
+
+Done.  mask=/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_mask.png
+
+[Grasp] 파지계산 중 (grasp_fruit)...
+RGB shape:   (480, 640, 3)
+Depth shape: (480, 640)  dtype=float32
+Mask active: 6115 px
+Hand pose: built-in (thumb j1=j2=90°, rest=0)
+Object points (camera frame): 4364
+Object points after SOR     : 4270
+Calibration (T_base_camera): configs/calibration/extrinsic_20260612_170053.json
+T_world_base  R:
+[[ 1.          0.          0.        ]
+ [ 0.          0.70738827 -0.70682518]
+ [ 0.          0.70682518  0.70738827]]
+T_world_camera t: [0.09135110229126803, 0.032791288748222985, 0.494643503955826]
+[fruits.yaml] 'orange' → yaw=-45.0°  x=0.010m  y=0.000m  z_offset=0.150m
+Object centroid (world): x=0.416  y=-0.001  z_top(95pct)=0.005
+PCA major axis: alpha=-83.0°  alpha_perp=7.0°  alpha_final=7.0°  total_yaw=-38.0°  top_cluster_pts=1281
+EE pose (world): xyz=(0.426, 0.000, 0.155)  quat=[0.945, -0.326, 0.0, 0.0]
+Hand enc (HW): [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+Hand init enc   : [4096, -4096, 0, 0, -683, 0, 3072, 0, 0, 0, 3072, 0, 683, 0, 3072, 0]
+Hand release enc: [4096, -4096, 0, 0, -683, 0, 0, 0, 0, 0, 0, 0, 683, 0, 0, 0]
+Saved summary: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_000_000_topdown_summary.json
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_000_000_topdown_overlay.png
+
+[OK] Top-down grasp complete.
+
+[Robot] Scenario1 Pick (물체 쥔 채 유지) — 호스트 직접 실행
+[INFO] [1783602149.744651136] [grasp_executor]: Waiting for MoveGroup action server...
+[INFO] [1783602150.998143623] [grasp_executor]: Waiting for /compute_cartesian_path service...
+[INFO] [1783602150.998559432] [grasp_executor]: Waiting for /compute_ik service...
+[INFO] [1783602151.003293986] [grasp_executor]: Waiting for /compute_fk service...
+[INFO] [1783602151.003628385] [grasp_executor]: Waiting for /right_arm_controller/follow_joint_trajectory action server...
+[INFO] [1783602151.003949733] [grasp_executor]:   Trajectory action server ready — 부드러운 실행 사용
+[INFO] [1783602151.004217183] [grasp_executor]: Servers ready  (mode=direct_franka_topic)
+
+============================================================
+  Grasp Executor
+  EE target (world): xyz=[0.426, 0.0, 0.155]
+  EE target (base) : xyz=[0.36, 0.126, -0.047]
+  quat (base)      : [0.874, -0.301, 0.125, 0.362]
+  Hand enc (HW)    : [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+  Approach offset  : 0.10 m
+
+  Grasp Executor  (STEP 1~4)
+  Grasp (base): [0.36, 0.126, -0.047]
+  Approach z  : 0.024 m
+============================================================
+[INFO] [1783602152.307674060] [grasp_executor]: [step_go_home] 홈 이동 중...
+[INFO] [1783602152.313037912] [grasp_executor]: [HOME] Joint-space planning...
+[INFO] [1783602152.380185053] [grasp_executor]: [HOME] OK  4 pts
+[INFO] [1783602152.783473237] [grasp_executor]: [HOME] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [HOME] 초기자세로 이동하시겠습니까? (y/n): y
+[INFO] [1783602154.641694833] [grasp_executor]: [TRAJ] 4 pts, dur=0.20s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602154.657041601] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602155.865031110] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+[INFO] [1783602155.865354119] [grasp_executor]: [step_go_home] 완료
+
+[APPROACH] Cartesian path (max_step=0.010)...
+[INFO] [1783602155.865949157] [grasp_executor]: [APPROACH] Cartesian → (0.360, 0.196, 0.024)
+[INFO] [1783602155.904234137] [grasp_executor]: [APPROACH] Cartesian OK 100%  17 pts
+[INFO] [1783602155.904879125] [grasp_executor]: [TIMESTAMP] 17 pts  total=4.03s
+[INFO] [1783602156.306992693] [grasp_executor]: [APPROACH] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [APPROACH] 실행하시겠습니까? (y/n): y
+[INFO] [1783602159.188356975] [grasp_executor]: [TRAJ] 17 pts, dur=4.03s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602159.211976556] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 32s)...
+[INFO] [1783602164.245911035] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+
+[TARGET] Cartesian path (max_step=0.010)...
+[INFO] [1783602164.246439473] [grasp_executor]: [TARGET] Cartesian → (0.360, 0.126, -0.047)
+[INFO] [1783602164.270483362] [grasp_executor]: [TARGET] Cartesian OK 100%  8 pts
+[INFO] [1783602164.270999311] [grasp_executor]: [TIMESTAMP] 8 pts  total=0.77s
+[INFO] [1783602164.673372227] [grasp_executor]: [TARGET] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [TARGET] 실행하시겠습니까? (y/n): y
+[INFO] [1783602168.405649440] [grasp_executor]: [TRAJ] 8 pts, dur=0.77s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602168.418498948] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602170.201528315] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+
+  STEP 3/4  HAND 파지  enc=[4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+  [HAND] 손가락 파지하시겠습니까? (y/n): y
+[INFO] [1783602173.508407506] [grasp_executor]: [HAND] 30steps × 0.02s = 0.6s
+[INFO] [1783602173.508725005] [grasp_executor]:   target=[4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+[INFO] [1783602173.509155434] [grasp_executor]:   [ 1/30] t=0.0  raw=[4096, -4096, 137, 137, -683, 137, 3106, 137, 0, 137, 3106, 137, 683, 137, 3106, 137]
+[INFO] [1783602173.530621183] [grasp_executor]:   [ 2/30] t=0.1  raw=[4096, -4096, 273, 273, -683, 273, 3140, 273, 0, 273, 3140, 273, 683, 273, 3140, 273]
+[INFO] [1783602173.551893833] [grasp_executor]:   [ 3/30] t=0.1  raw=[4096, -4096, 410, 410, -683, 410, 3174, 410, 0, 410, 3174, 410, 683, 410, 3174, 410]
+[INFO] [1783602173.572996484] [grasp_executor]:   [ 4/30] t=0.1  raw=[4096, -4096, 546, 546, -683, 546, 3209, 546, 0, 546, 3209, 546, 683, 546, 3209, 546]
+[INFO] [1783602173.600612473] [grasp_executor]:   [ 5/30] t=0.2  raw=[4096, -4096, 683, 683, -683, 683, 3243, 683, 0, 683, 3243, 683, 683, 683, 3243, 683]
+[INFO] [1783602173.622183572] [grasp_executor]:   [ 6/30] t=0.2  raw=[4096, -4096, 819, 819, -683, 819, 3277, 819, 0, 819, 3277, 819, 683, 819, 3277, 819]
+[INFO] [1783602173.643603252] [grasp_executor]:   [ 7/30] t=0.2  raw=[4096, -4096, 956, 956, -683, 956, 3311, 956, 0, 956, 3311, 956, 683, 956, 3311, 956]
+[INFO] [1783602173.667518953] [grasp_executor]:   [ 8/30] t=0.3  raw=[4096, -4096, 1092, 1092, -683, 1092, 3345, 1092, 0, 1092, 3345, 1092, 683, 1092, 3345, 1092]
+[INFO] [1783602173.688266185] [grasp_executor]:   [ 9/30] t=0.3  raw=[4096, -4096, 1229, 1229, -683, 1229, 3379, 1229, 0, 1229, 3379, 1229, 683, 1229, 3379, 1229]
+[INFO] [1783602173.710924631] [grasp_executor]:   [10/30] t=0.3  raw=[4096, -4096, 1365, 1365, -683, 1365, 3413, 1365, 0, 1365, 3413, 1365, 683, 1365, 3413, 1365]
+[INFO] [1783602173.732491040] [grasp_executor]:   [11/30] t=0.4  raw=[4096, -4096, 1502, 1502, -683, 1502, 3447, 1502, 0, 1502, 3447, 1502, 683, 1502, 3447, 1502]
+[INFO] [1783602173.754082509] [grasp_executor]:   [12/30] t=0.4  raw=[4096, -4096, 1638, 1638, -683, 1638, 3482, 1638, 0, 1638, 3482, 1638, 683, 1638, 3482, 1638]
+[INFO] [1783602173.780398432] [grasp_executor]:   [13/30] t=0.4  raw=[4096, -4096, 1775, 1775, -683, 1775, 3516, 1775, 0, 1775, 3516, 1775, 683, 1775, 3516, 1775]
+[INFO] [1783602173.802761329] [grasp_executor]:   [14/30] t=0.5  raw=[4096, -4096, 1911, 1911, -683, 1911, 3550, 1911, 0, 1911, 3550, 1911, 683, 1911, 3550, 1911]
+[INFO] [1783602173.823899469] [grasp_executor]:   [15/30] t=0.5  raw=[4096, -4096, 2048, 2048, -683, 2048, 3584, 2048, 0, 2048, 3584, 2048, 683, 2048, 3584, 2048]
+[INFO] [1783602173.844590641] [grasp_executor]:   [16/30] t=0.5  raw=[4096, -4096, 2185, 2185, -683, 2185, 3618, 2185, 0, 2185, 3618, 2185, 683, 2185, 3618, 2185]
+[INFO] [1783602173.865124374] [grasp_executor]:   [17/30] t=0.6  raw=[4096, -4096, 2321, 2321, -683, 2321, 3652, 2321, 0, 2321, 3652, 2321, 683, 2321, 3652, 2321]
+[INFO] [1783602173.885641987] [grasp_executor]:   [18/30] t=0.6  raw=[4096, -4096, 2458, 2458, -683, 2458, 3686, 2458, 0, 2458, 3686, 2458, 683, 2458, 3686, 2458]
+[INFO] [1783602173.907838054] [grasp_executor]:   [19/30] t=0.6  raw=[4096, -4096, 2594, 2594, -683, 2594, 3721, 2594, 0, 2594, 3721, 2594, 683, 2594, 3721, 2594]
+[INFO] [1783602173.928341046] [grasp_executor]:   [20/30] t=0.7  raw=[4096, -4096, 2731, 2731, -683, 2731, 3755, 2731, 0, 2731, 3755, 2731, 683, 2731, 3755, 2731]
+[INFO] [1783602173.948951489] [grasp_executor]:   [21/30] t=0.7  raw=[4096, -4096, 2867, 2867, -683, 2867, 3789, 2867, 0, 2867, 3789, 2867, 683, 2867, 3789, 2867]
+[INFO] [1783602173.970300038] [grasp_executor]:   [22/30] t=0.7  raw=[4096, -4096, 3004, 3004, -683, 3004, 3823, 3004, 0, 3004, 3823, 3004, 683, 3004, 3823, 3004]
+[INFO] [1783602173.990773651] [grasp_executor]:   [23/30] t=0.8  raw=[4096, -4096, 3140, 3140, -683, 3140, 3857, 3140, 0, 3140, 3857, 3140, 683, 3140, 3857, 3140]
+[INFO] [1783602174.012315530] [grasp_executor]:   [24/30] t=0.8  raw=[4096, -4096, 3277, 3277, -683, 3277, 3891, 3277, 0, 3277, 3891, 3277, 683, 3277, 3891, 3277]
+[INFO] [1783602174.034505858] [grasp_executor]:   [25/30] t=0.8  raw=[4096, -4096, 3413, 3413, -683, 3413, 3925, 3413, 0, 3413, 3925, 3413, 683, 3413, 3925, 3413]
+[INFO] [1783602174.058493389] [grasp_executor]:   [26/30] t=0.9  raw=[4096, -4096, 3550, 3550, -683, 3550, 3959, 3550, 0, 3550, 3959, 3550, 683, 3550, 3959, 3550]
+[INFO] [1783602174.078986462] [grasp_executor]:   [27/30] t=0.9  raw=[4096, -4096, 3686, 3686, -683, 3686, 3994, 3686, 0, 3686, 3994, 3686, 683, 3686, 3994, 3686]
+[INFO] [1783602174.099478084] [grasp_executor]:   [28/30] t=0.9  raw=[4096, -4096, 3823, 3823, -683, 3823, 4028, 3823, 0, 3823, 4028, 3823, 683, 3823, 4028, 3823]
+[INFO] [1783602174.121661872] [grasp_executor]:   [29/30] t=1.0  raw=[4096, -4096, 3959, 3959, -683, 3959, 4062, 3959, 0, 3959, 4062, 3959, 683, 3959, 4062, 3959]
+[INFO] [1783602174.142189614] [grasp_executor]:   [30/30] t=1.0  raw=[4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+[INFO] [1783602174.143484010] [grasp_executor]: [HAND] 파지 완료
+[INFO] [1783602174.143840999] [grasp_executor]: [LIFT] 하강 궤적 역재생 (IK 재계산 없음)
+
+  [LIFT] 하강 경로 역재생으로 상승
+  [LIFT] 실행하시겠습니까? (y/n): y
+[INFO] [1783602180.278195393] [grasp_executor]: [TRAJ] 8 pts, dur=0.77s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602180.288894838] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602182.072680835] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+
+  [OK] 파지 완료
+
+────────────────────────────────────────────────────────────
+  [FINALIZE] 시나리오1 — 물체 쥔 채 그 자리 유지
+  (release / go_home 스킵 → Inhand(2) 이어받기 대기)
+────────────────────────────────────────────────────────────
+  ✓ Pick 성공: query='orange'  →  scenario1_000_000_topdown_summary.json
+
+[Scenario1] ✅ Pick DONE — 제어권 반납. Inhand(2) 차례.
+ cy  ⎇  franka U:4  ⓔ base  ~/motie_ws/Topdown_Grasp_sja   /usr/bin/python3 scripts/run_scenario1_host.py     --calibration configs/calibration/extrinsic_20260612_170053.json     --execute_robot
+
+============================================================
+  Scenario 1 — Pick (시퀀스 제어권, 호스트/py3.10)
+  Pick 1회 성공 시 제어권 반납(DONE) → Inhand(2) 차례
+  'exit'/'quit'/'q' = Pick 취소(abort)
+============================================================
+
+[Scenario1] 제어권 획득 중 (Start)...
+
+  Query> lemon
+[Camera] 캡처 저장: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/raw/scenario1_000_000.npz
+
+[SAM3] 'lemon' 검출 중 (grasp_fruit)...
+Image: scenario1_000_000  shape=(480, 640, 3)
+
+[1/1] SAM3  query='lemon'
+  SAM3 loading: facebook/sam3
+Loading weights: 100%|████████████████████████| 1468/1468 [00:00<00:00, 3147.24it/s]
+  SAM3 loaded
+  Query: 'lemon'
+  No result for 'lemon'
+
+[WARN] No mask produced — exiting with error.
+  [WARN] SAM3 마스크 없음
+  [WARN] 마스크 없음 — 다시 입력하세요.
+
+  Query> orange
+[Camera] 캡처 저장: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/raw/scenario1_001_001.npz
+
+[SAM3] 'orange' 검출 중 (grasp_fruit)...
+Image: scenario1_001_001  shape=(480, 640, 3)
+
+[1/1] SAM3  query='orange'
+  SAM3 loading: facebook/sam3
+Loading weights: 100%|████████████████████████| 1468/1468 [00:00<00:00, 3116.96it/s]
+  SAM3 loaded
+  Query: 'orange'
+  OK: 'orange'  score=0.918  mask_px=4298
+
+Saved mask: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_001_001_mask.png
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_001_001_overlay.png
+Saved JSON:  /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_001_001_sam3.json
+
+Done.  mask=/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_001_001_mask.png
+
+[Grasp] 파지계산 중 (grasp_fruit)...
+RGB shape:   (480, 640, 3)
+Depth shape: (480, 640)  dtype=float32
+Mask active: 4298 px
+Hand pose: built-in (thumb j1=j2=90°, rest=0)
+Object points (camera frame): 2758
+Object points after SOR     : 2719
+Calibration (T_base_camera): configs/calibration/extrinsic_20260612_170053.json
+T_world_base  R:
+[[ 1.          0.          0.        ]
+ [ 0.          0.70738827 -0.70682518]
+ [ 0.          0.70682518  0.70738827]]
+T_world_camera t: [0.09135110229126803, 0.032791288748222985, 0.494643503955826]
+[fruits.yaml] 'orange' → yaw=-45.0°  x=0.010m  y=0.000m  z_offset=0.150m
+Object centroid (world): x=0.425  y=0.026  z_top(95pct)=0.018
+PCA major axis: alpha=50.3°  alpha_perp=140.3°  alpha_final=-39.7°  total_yaw=-84.7°  top_cluster_pts=816
+EE pose (world): xyz=(0.433, 0.020, 0.168)  quat=[0.739, -0.674, 0.0, 0.0]
+Hand enc (HW): [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+Hand init enc   : [4096, -4096, 0, 0, -683, 0, 3072, 0, 0, 0, 3072, 0, 683, 0, 3072, 0]
+Hand release enc: [4096, -4096, 0, 0, -683, 0, 0, 0, 0, 0, 0, 0, 683, 0, 0, 0]
+Saved summary: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_001_001_topdown_summary.json
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_001_001_topdown_overlay.png
+
+[OK] Top-down grasp complete.
+
+[Robot] Scenario1 Pick (물체 쥔 채 유지) — 호스트 직접 실행
+[INFO] [1783602239.392112567] [grasp_executor]: Waiting for MoveGroup action server...
+[INFO] [1783602240.896073131] [grasp_executor]: Waiting for /compute_cartesian_path service...
+[INFO] [1783602240.896442030] [grasp_executor]: Waiting for /compute_ik service...
+[INFO] [1783602240.902347353] [grasp_executor]: Waiting for /compute_fk service...
+[INFO] [1783602240.902692282] [grasp_executor]: Waiting for /right_arm_controller/follow_joint_trajectory action server...
+[INFO] [1783602240.903022201] [grasp_executor]:   Trajectory action server ready — 부드러운 실행 사용
+[INFO] [1783602240.903293080] [grasp_executor]: Servers ready  (mode=direct_franka_topic)
+
+============================================================
+  Grasp Executor
+  EE target (world): xyz=[0.433, 0.02, 0.168]
+  EE target (base) : xyz=[0.367, 0.149, -0.051]
+  quat (base)      : [0.683, -0.622, 0.258, 0.283]
+  Hand enc (HW)    : [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+  Approach offset  : 0.10 m
+
+  Grasp Executor  (STEP 1~4)
+  Grasp (base): [0.367, 0.149, -0.051]
+  Approach z  : 0.019 m
+============================================================
+[INFO] [1783602242.207006040] [grasp_executor]: [step_go_home] 홈 이동 중...
+[INFO] [1783602242.207788498] [grasp_executor]: [HOME] Joint-space planning...
+[INFO] [1783602242.311623236] [grasp_executor]: [HOME] OK  28 pts
+[INFO] [1783602242.713898895] [grasp_executor]: [HOME] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [HOME] 초기자세로 이동하시겠습니까? (y/n): y
+[INFO] [1783602245.771634763] [grasp_executor]: [TRAJ] 28 pts, dur=2.64s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602245.792507942] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602249.437639188] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+[INFO] [1783602249.437948267] [grasp_executor]: [step_go_home] 완료
+
+[APPROACH] Cartesian path (max_step=0.010)...
+[INFO] [1783602249.438541675] [grasp_executor]: [APPROACH] Cartesian → (0.367, 0.220, 0.019)
+[INFO] [1783602249.474443352] [grasp_executor]: [APPROACH] Cartesian OK 100%  18 pts
+[INFO] [1783602249.476579666] [grasp_executor]: [TIMESTAMP] 18 pts  total=4.44s
+[INFO] [1783602249.877944502] [grasp_executor]: [APPROACH] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [APPROACH] 실행하시겠습니까? (y/n): n
+  [APPROACH] 취소됨.
+[ERROR] [1783602254.972665499] [grasp_executor]: [step_approach] 실패
+
+────────────────────────────────────────────────────────────
+  [FINALIZE] 시나리오1 — 물체 쥔 채 그 자리 유지
+  (release / go_home 스킵 → Inhand(2) 이어받기 대기)
+────────────────────────────────────────────────────────────
+  [WARN] 로봇 pick 실패 (rc=1) — 다시 입력하세요.
+
+  Query> lemon
+[Camera] 캡처 저장: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/raw/scenario1_002_002.npz
+
+[SAM3] 'lemon' 검출 중 (grasp_fruit)...
+Image: scenario1_002_002  shape=(480, 640, 3)
+
+[1/1] SAM3  query='lemon'
+  SAM3 loading: facebook/sam3
+Loading weights: 100%|████████████████████████| 1468/1468 [00:00<00:00, 2829.35it/s]
+  SAM3 loaded
+  Query: 'lemon'
+  OK: 'lemon'  score=0.902  mask_px=2506
+
+Saved mask: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_002_002_mask.png
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_002_002_overlay.png
+Saved JSON:  /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_002_002_sam3.json
+
+Done.  mask=/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_002_002_mask.png
+
+[Grasp] 파지계산 중 (grasp_fruit)...
+RGB shape:   (480, 640, 3)
+Depth shape: (480, 640)  dtype=float32
+Mask active: 2506 px
+Hand pose: built-in (thumb j1=j2=90°, rest=0)
+Object points (camera frame): 2448
+Object points after SOR     : 2317
+Calibration (T_base_camera): configs/calibration/extrinsic_20260612_170053.json
+T_world_base  R:
+[[ 1.          0.          0.        ]
+ [ 0.          0.70738827 -0.70682518]
+ [ 0.          0.70682518  0.70738827]]
+T_world_camera t: [0.09135110229126803, 0.032791288748222985, 0.494643503955826]
+[fruits.yaml] 'lemon' → yaw=-45.0°  x=0.010m  y=0.000m  z_offset=0.170m
+Object centroid (world): x=0.501  y=-0.108  z_top(95pct)=-0.030
+PCA major axis: alpha=172.8°  alpha_perp=262.8°  alpha_final=82.8°  total_yaw=37.8°  top_cluster_pts=695
+EE pose (world): xyz=(0.503, -0.098, 0.140)  quat=[0.946, 0.324, 0.0, 0.0]
+Hand enc (HW): [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+Hand init enc   : [4096, -4096, 0, 0, -683, 0, 3072, 0, 0, 0, 3072, 0, 683, 0, 3072, 0]
+Hand release enc: [4096, -4096, 0, 0, -683, 0, 0, 0, 0, 0, 0, 0, 683, 0, 0, 0]
+Saved summary: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_002_002_topdown_summary.json
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_002_002_topdown_overlay.png
+
+[OK] Top-down grasp complete.
+
+[Robot] Scenario1 Pick (물체 쥔 채 유지) — 호스트 직접 실행
+[INFO] [1783602271.463688107] [grasp_executor]: Waiting for MoveGroup action server...
+[INFO] [1783602275.225457262] [grasp_executor]: Waiting for /compute_cartesian_path service...
+[INFO] [1783602275.225831811] [grasp_executor]: Waiting for /compute_ik service...
+[INFO] [1783602275.230573608] [grasp_executor]: Waiting for /compute_fk service...
+[INFO] [1783602275.230931017] [grasp_executor]: Waiting for /right_arm_controller/follow_joint_trajectory action server...
+[INFO] [1783602275.231259686] [grasp_executor]:   Trajectory action server ready — 부드러운 실행 사용
+[INFO] [1783602275.231520485] [grasp_executor]: Servers ready  (mode=direct_franka_topic)
+
+============================================================
+  Grasp Executor
+  EE target (world): xyz=[0.503, -0.098, 0.14]
+  EE target (base) : xyz=[0.437, 0.046, 0.012]
+  quat (base)      : [0.874, 0.299, -0.124, 0.362]
+  Hand enc (HW)    : [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+  Approach offset  : 0.10 m
+
+  Grasp Executor  (STEP 1~4)
+  Grasp (base): [0.437, 0.046, 0.012]
+  Approach z  : 0.083 m
+============================================================
+[INFO] [1783602276.538605056] [grasp_executor]: [step_go_home] 홈 이동 중...
+[INFO] [1783602276.539375464] [grasp_executor]: [HOME] Joint-space planning...
+[INFO] [1783602276.618733146] [grasp_executor]: [HOME] OK  5 pts
+[INFO] [1783602277.020755534] [grasp_executor]: [HOME] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [HOME] 초기자세로 이동하시겠습니까? (y/n): n
+  [HOME] 취소됨.
+
+[APPROACH] Cartesian path (max_step=0.010)...
+[INFO] [1783602281.054074539] [grasp_executor]: [APPROACH] Cartesian → (0.437, 0.116, 0.083)
+[INFO] [1783602281.076286409] [grasp_executor]: [APPROACH] Cartesian OK 100%  15 pts
+[INFO] [1783602281.079244000] [grasp_executor]: [TIMESTAMP] 15 pts  total=3.49s
+[INFO] [1783602281.480690419] [grasp_executor]: [APPROACH] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [APPROACH] 실행하시겠습니까? (y/n): y
+[INFO] [1783602282.995197655] [grasp_executor]: [TRAJ] 15 pts, dur=3.49s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602283.006647384] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602287.502448358] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+
+[TARGET] Cartesian path (max_step=0.010)...
+[INFO] [1783602287.502948067] [grasp_executor]: [TARGET] Cartesian → (0.437, 0.046, 0.012)
+[INFO] [1783602287.517093269] [grasp_executor]: [TARGET] Cartesian OK 100%  8 pts
+[INFO] [1783602287.517549048] [grasp_executor]: [TIMESTAMP] 8 pts  total=0.77s
+[INFO] [1783602287.925916929] [grasp_executor]: [TARGET] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [TARGET] 실행하시겠습니까? (y/n): n
+  [TARGET] 취소됨.
+[ERROR] [1783602291.860324574] [grasp_executor]: [step_descend] 실패
+
+────────────────────────────────────────────────────────────
+  [FINALIZE] 시나리오1 — 물체 쥔 채 그 자리 유지
+  (release / go_home 스킵 → Inhand(2) 이어받기 대기)
+────────────────────────────────────────────────────────────
+  [WARN] 로봇 pick 실패 (rc=1) — 다시 입력하세요.
+
+  Query> orange
+[Camera] 캡처 저장: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/raw/scenario1_003_003.npz
+
+[SAM3] 'orange' 검출 중 (grasp_fruit)...
+Image: scenario1_003_003  shape=(480, 640, 3)
+
+[1/1] SAM3  query='orange'
+  SAM3 loading: facebook/sam3
+Loading weights: 100%|████████████████████████| 1468/1468 [00:00<00:00, 2969.82it/s]
+  SAM3 loaded
+  Query: 'orange'
+  OK: 'orange'  score=0.922  mask_px=4610
+
+Saved mask: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_003_003_mask.png
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_003_003_overlay.png
+Saved JSON:  /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_003_003_sam3.json
+
+Done.  mask=/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_003_003_mask.png
+
+[Grasp] 파지계산 중 (grasp_fruit)...
+RGB shape:   (480, 640, 3)
+Depth shape: (480, 640)  dtype=float32
+Mask active: 4610 px
+Hand pose: built-in (thumb j1=j2=90°, rest=0)
+Object points (camera frame): 3473
+Object points after SOR     : 3387
+Calibration (T_base_camera): configs/calibration/extrinsic_20260612_170053.json
+T_world_base  R:
+[[ 1.          0.          0.        ]
+ [ 0.          0.70738827 -0.70682518]
+ [ 0.          0.70682518  0.70738827]]
+T_world_camera t: [0.09135110229126803, 0.032791288748222985, 0.494643503955826]
+[fruits.yaml] 'orange' → yaw=-45.0°  x=0.010m  y=0.000m  z_offset=0.150m
+Object centroid (world): x=0.578  y=0.053  z_top(95pct)=0.013
+PCA major axis: alpha=90.6°  alpha_perp=180.6°  alpha_final=0.6°  total_yaw=-44.4°  top_cluster_pts=1016
+EE pose (world): xyz=(0.588, 0.053, 0.163)  quat=[0.926, -0.377, 0.0, 0.0]
+Hand enc (HW): [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+Hand init enc   : [4096, -4096, 0, 0, -683, 0, 3072, 0, 0, 0, 3072, 0, 683, 0, 3072, 0]
+Hand release enc: [4096, -4096, 0, 0, -683, 0, 0, 0, 0, 0, 0, 0, 683, 0, 0, 0]
+Saved summary: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_003_003_topdown_summary.json
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_003_003_topdown_overlay.png
+
+[OK] Top-down grasp complete.
+
+[Robot] Scenario1 Pick (물체 쥔 채 유지) — 호스트 직접 실행
+[INFO] [1783602318.831794336] [grasp_executor]: Waiting for MoveGroup action server...
+[INFO] [1783602319.336483060] [grasp_executor]: Waiting for /compute_cartesian_path service...
+[INFO] [1783602319.336833989] [grasp_executor]: Waiting for /compute_ik service...
+[INFO] [1783602319.340693529] [grasp_executor]: Waiting for /compute_fk service...
+[INFO] [1783602319.341016338] [grasp_executor]: Waiting for /right_arm_controller/follow_joint_trajectory action server...
+[INFO] [1783602319.846095252] [grasp_executor]:   Trajectory action server ready — 부드러운 실행 사용
+[INFO] [1783602319.846413221] [grasp_executor]: Servers ready  (mode=direct_franka_topic)
+
+============================================================
+  Grasp Executor
+  EE target (world): xyz=[0.588, 0.053, 0.163]
+  EE target (base) : xyz=[0.522, 0.169, -0.078]
+  quat (base)      : [0.856, -0.349, 0.144, 0.354]
+  Hand enc (HW)    : [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+  Approach offset  : 0.10 m
+
+  Grasp Executor  (STEP 1~4)
+  Grasp (base): [0.522, 0.169, -0.078]
+  Approach z  : -0.008 m
+============================================================
+[INFO] [1783602321.150723075] [grasp_executor]: [step_go_home] 홈 이동 중...
+[INFO] [1783602321.167596702] [grasp_executor]: [HOME] Joint-space planning...
+[INFO] [1783602321.277042965] [grasp_executor]: [HOME] OK  26 pts
+[INFO] [1783602321.678438126] [grasp_executor]: [HOME] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [HOME] 초기자세로 이동하시겠습니까? (y/n): y
+[INFO] [1783602323.944735797] [grasp_executor]: [TRAJ] 26 pts, dur=2.46s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602323.958579482] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602327.433174567] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+[INFO] [1783602327.434413004] [grasp_executor]: [step_go_home] 완료
+
+[APPROACH] Cartesian path (max_step=0.010)...
+[INFO] [1783602327.435027072] [grasp_executor]: [APPROACH] Cartesian → (0.522, 0.240, -0.008)
+[INFO] [1783602327.467606201] [grasp_executor]: [APPROACH] Cartesian OK 100%  18 pts
+[INFO] [1783602327.468214739] [grasp_executor]: [TIMESTAMP] 18 pts  total=5.18s
+[INFO] [1783602327.869871400] [grasp_executor]: [APPROACH] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [APPROACH] 실행하시겠습니까? (y/n): y
+[INFO] [1783602329.922650086] [grasp_executor]: [TRAJ] 18 pts, dur=5.18s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602329.936013083] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 36s)...
+[INFO] [1783602336.138679779] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+
+[TARGET] Cartesian path (max_step=0.010)...
+[INFO] [1783602336.139194408] [grasp_executor]: [TARGET] Cartesian → (0.522, 0.169, -0.078)
+[INFO] [1783602336.154400540] [grasp_executor]: [TARGET] Cartesian OK 100%  7 pts
+[INFO] [1783602336.154842549] [grasp_executor]: [TIMESTAMP] 7 pts  total=0.55s
+[INFO] [1783602336.558418371] [grasp_executor]: [TARGET] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [TARGET] 실행하시겠습니까? (y/n): y
+[INFO] [1783602341.949825058] [grasp_executor]: [TRAJ] 7 pts, dur=0.55s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602341.964664422] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602343.527938647] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+
+  STEP 3/4  HAND 파지  enc=[4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+  [HAND] 손가락 파지하시겠습니까? (y/n): y
+[INFO] [1783602346.724548905] [grasp_executor]: [HAND] 30steps × 0.02s = 0.6s
+[INFO] [1783602346.724872324] [grasp_executor]:   target=[4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+[INFO] [1783602346.725308813] [grasp_executor]:   [ 1/30] t=0.0  raw=[4096, -4096, 137, 137, -683, 137, 3106, 137, 0, 137, 3106, 137, 683, 137, 3106, 137]
+[INFO] [1783602346.745806343] [grasp_executor]:   [ 2/30] t=0.1  raw=[4096, -4096, 273, 273, -683, 273, 3140, 273, 0, 273, 3140, 273, 683, 273, 3140, 273]
+[INFO] [1783602346.767871050] [grasp_executor]:   [ 3/30] t=0.1  raw=[4096, -4096, 410, 410, -683, 410, 3174, 410, 0, 410, 3174, 410, 683, 410, 3174, 410]
+[INFO] [1783602346.788729049] [grasp_executor]:   [ 4/30] t=0.1  raw=[4096, -4096, 546, 546, -683, 546, 3209, 546, 0, 546, 3209, 546, 683, 546, 3209, 546]
+[INFO] [1783602346.810475996] [grasp_executor]:   [ 5/30] t=0.2  raw=[4096, -4096, 683, 683, -683, 683, 3243, 683, 0, 683, 3243, 683, 683, 683, 3243, 683]
+[INFO] [1783602346.831092356] [grasp_executor]:   [ 6/30] t=0.2  raw=[4096, -4096, 819, 819, -683, 819, 3277, 819, 0, 819, 3277, 819, 683, 819, 3277, 819]
+[INFO] [1783602346.852833273] [grasp_executor]:   [ 7/30] t=0.2  raw=[4096, -4096, 956, 956, -683, 956, 3311, 956, 0, 956, 3311, 956, 683, 956, 3311, 956]
+[INFO] [1783602346.873957272] [grasp_executor]:   [ 8/30] t=0.3  raw=[4096, -4096, 1092, 1092, -683, 1092, 3345, 1092, 0, 1092, 3345, 1092, 683, 1092, 3345, 1092]
+[INFO] [1783602346.897817134] [grasp_executor]:   [ 9/30] t=0.3  raw=[4096, -4096, 1229, 1229, -683, 1229, 3379, 1229, 0, 1229, 3379, 1229, 683, 1229, 3379, 1229]
+[INFO] [1783602346.918305234] [grasp_executor]:   [10/30] t=0.3  raw=[4096, -4096, 1365, 1365, -683, 1365, 3413, 1365, 0, 1365, 3413, 1365, 683, 1365, 3413, 1365]
+[INFO] [1783602346.943099054] [grasp_executor]:   [11/30] t=0.4  raw=[4096, -4096, 1502, 1502, -683, 1502, 3447, 1502, 0, 1502, 3447, 1502, 683, 1502, 3447, 1502]
+[INFO] [1783602346.967448575] [grasp_executor]:   [12/30] t=0.4  raw=[4096, -4096, 1638, 1638, -683, 1638, 3482, 1638, 0, 1638, 3482, 1638, 683, 1638, 3482, 1638]
+[INFO] [1783602346.987965325] [grasp_executor]:   [13/30] t=0.4  raw=[4096, -4096, 1775, 1775, -683, 1775, 3516, 1775, 0, 1775, 3516, 1775, 683, 1775, 3516, 1775]
+[INFO] [1783602347.008520765] [grasp_executor]:   [14/30] t=0.5  raw=[4096, -4096, 1911, 1911, -683, 1911, 3550, 1911, 0, 1911, 3550, 1911, 683, 1911, 3550, 1911]
+[INFO] [1783602347.031530389] [grasp_executor]:   [15/30] t=0.5  raw=[4096, -4096, 2048, 2048, -683, 2048, 3584, 2048, 0, 2048, 3584, 2048, 683, 2048, 3584, 2048]
+[INFO] [1783602347.052758577] [grasp_executor]:   [16/30] t=0.5  raw=[4096, -4096, 2185, 2185, -683, 2185, 3618, 2185, 0, 2185, 3618, 2185, 683, 2185, 3618, 2185]
+[INFO] [1783602347.073226018] [grasp_executor]:   [17/30] t=0.6  raw=[4096, -4096, 2321, 2321, -683, 2321, 3652, 2321, 0, 2321, 3652, 2321, 683, 2321, 3652, 2321]
+[INFO] [1783602347.104714001] [grasp_executor]:   [18/30] t=0.6  raw=[4096, -4096, 2458, 2458, -683, 2458, 3686, 2458, 0, 2458, 3686, 2458, 683, 2458, 3686, 2458]
+[INFO] [1783602347.128559893] [grasp_executor]:   [19/30] t=0.6  raw=[4096, -4096, 2594, 2594, -683, 2594, 3721, 2594, 0, 2594, 3721, 2594, 683, 2594, 3721, 2594]
+[INFO] [1783602347.149108443] [grasp_executor]:   [20/30] t=0.7  raw=[4096, -4096, 2731, 2731, -683, 2731, 3755, 2731, 0, 2731, 3755, 2731, 683, 2731, 3755, 2731]
+[INFO] [1783602347.169568924] [grasp_executor]:   [21/30] t=0.7  raw=[4096, -4096, 2867, 2867, -683, 2867, 3789, 2867, 0, 2867, 3789, 2867, 683, 2867, 3789, 2867]
+[INFO] [1783602347.192646508] [grasp_executor]:   [22/30] t=0.7  raw=[4096, -4096, 3004, 3004, -683, 3004, 3823, 3004, 0, 3004, 3823, 3004, 683, 3004, 3823, 3004]
+[INFO] [1783602347.213410307] [grasp_executor]:   [23/30] t=0.8  raw=[4096, -4096, 3140, 3140, -683, 3140, 3857, 3140, 0, 3140, 3857, 3140, 683, 3140, 3857, 3140]
+[INFO] [1783602347.234595956] [grasp_executor]:   [24/30] t=0.8  raw=[4096, -4096, 3277, 3277, -683, 3277, 3891, 3277, 0, 3277, 3891, 3277, 683, 3277, 3891, 3277]
+[INFO] [1783602347.258362468] [grasp_executor]:   [25/30] t=0.8  raw=[4096, -4096, 3413, 3413, -683, 3413, 3925, 3413, 0, 3413, 3925, 3413, 683, 3413, 3925, 3413]
+[INFO] [1783602347.279259977] [grasp_executor]:   [26/30] t=0.9  raw=[4096, -4096, 3550, 3550, -683, 3550, 3959, 3550, 0, 3550, 3959, 3550, 683, 3550, 3959, 3550]
+[INFO] [1783602347.300233007] [grasp_executor]:   [27/30] t=0.9  raw=[4096, -4096, 3686, 3686, -683, 3686, 3994, 3686, 0, 3686, 3994, 3686, 683, 3686, 3994, 3686]
+[INFO] [1783602347.321223516] [grasp_executor]:   [28/30] t=0.9  raw=[4096, -4096, 3823, 3823, -683, 3823, 4028, 3823, 0, 3823, 4028, 3823, 683, 3823, 4028, 3823]
+[INFO] [1783602347.342599464] [grasp_executor]:   [29/30] t=1.0  raw=[4096, -4096, 3959, 3959, -683, 3959, 4062, 3959, 0, 3959, 4062, 3959, 683, 3959, 4062, 3959]
+[INFO] [1783602347.363447633] [grasp_executor]:   [30/30] t=1.0  raw=[4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+[INFO] [1783602347.363731742] [grasp_executor]: [HAND] 파지 완료
+[INFO] [1783602347.365290009] [grasp_executor]: [LIFT] 하강 궤적 역재생 (IK 재계산 없음)
+
+  [LIFT] 하강 경로 역재생으로 상승
+  [LIFT] 실행하시겠습니까? (y/n): y
+[INFO] [1783602351.410574161] [grasp_executor]: [TRAJ] 7 pts, dur=0.55s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602351.430575542] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602352.982578515] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+
+  [OK] 파지 완료
+
+────────────────────────────────────────────────────────────
+  [FINALIZE] 시나리오1 — 물체 쥔 채 그 자리 유지
+  (release / go_home 스킵 → Inhand(2) 이어받기 대기)
+────────────────────────────────────────────────────────────
+  ✓ Pick 성공: query='orange'  →  scenario1_003_003_topdown_summary.json
+
+[Scenario1] ✅ Pick DONE — 제어권 반납. Inhand(2) 차례.
+ cy  ⎇  franka U:4  ⓔ base  ~/motie_ws/Topdown_Grasp_sja   /usr/bin/python3 scripts/run_scenario1_host.py     --calibration configs/calibration/extrinsic_20260612_170053.json     --execute_robot
+
+============================================================
+  Scenario 1 — Pick (시퀀스 제어권, 호스트/py3.10)
+  Pick 1회 성공 시 제어권 반납(DONE) → Inhand(2) 차례
+  'exit'/'quit'/'q' = Pick 취소(abort)
+============================================================
+
+[Scenario1] 제어권 획득 중 (Start)...
+
+  Query> lemon
+[Camera] 캡처 저장: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/raw/scenario1_000_000.npz
+
+[SAM3] 'lemon' 검출 중 (grasp_fruit)...
+Image: scenario1_000_000  shape=(480, 640, 3)
+
+[1/1] SAM3  query='lemon'
+  SAM3 loading: facebook/sam3
+Loading weights: 100%|████████████████████████| 1468/1468 [00:00<00:00, 2997.17it/s]
+  SAM3 loaded
+  Query: 'lemon'
+  OK: 'lemon'  score=0.906  mask_px=2520
+
+Saved mask: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_mask.png
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_overlay.png
+Saved JSON:  /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_sam3.json
+
+Done.  mask=/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/interim/scenario1_000_000_mask.png
+
+[Grasp] 파지계산 중 (grasp_fruit)...
+RGB shape:   (480, 640, 3)
+Depth shape: (480, 640)  dtype=float32
+Mask active: 2520 px
+Hand pose: built-in (thumb j1=j2=90°, rest=0)
+Object points (camera frame): 2225
+Object points after SOR     : 2138
+Calibration (T_base_camera): configs/calibration/extrinsic_20260612_170053.json
+T_world_base  R:
+[[ 1.          0.          0.        ]
+ [ 0.          0.70738827 -0.70682518]
+ [ 0.          0.70682518  0.70738827]]
+T_world_camera t: [0.09135110229126803, 0.032791288748222985, 0.494643503955826]
+[fruits.yaml] 'lemon' → yaw=-45.0°  x=0.010m  y=0.000m  z_offset=0.170m
+Object centroid (world): x=0.501  y=-0.098  z_top(95pct)=-0.028
+PCA major axis: alpha=165.4°  alpha_perp=255.4°  alpha_final=75.4°  total_yaw=30.4°  top_cluster_pts=642
+EE pose (world): xyz=(0.503, -0.089, 0.142)  quat=[0.965, 0.262, 0.0, 0.0]
+Hand enc (HW): [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+Hand init enc   : [4096, -4096, 0, 0, -683, 0, 3072, 0, 0, 0, 3072, 0, 683, 0, 3072, 0]
+Hand release enc: [4096, -4096, 0, 0, -683, 0, 0, 0, 0, 0, 0, 0, 683, 0, 0, 0]
+Saved summary: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_000_000_topdown_summary.json
+Saved overlay: /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/data/outputs/scenario1_000_000_topdown_overlay.png
+
+[OK] Top-down grasp complete.
+
+[Robot] Scenario1 Pick (물체 쥔 채 유지) — 호스트 직접 실행
+[INFO] [1783602398.820137454] [grasp_executor]: Waiting for MoveGroup action server...
+[INFO] [1783602400.574086317] [grasp_executor]: Waiting for /compute_cartesian_path service...
+[INFO] [1783602400.574460416] [grasp_executor]: Waiting for /compute_ik service...
+[INFO] [1783602400.578643887] [grasp_executor]: Waiting for /compute_fk service...
+[INFO] [1783602400.579001706] [grasp_executor]: Waiting for /right_arm_controller/follow_joint_trajectory action server...
+[INFO] [1783602400.579332456] [grasp_executor]:   Trajectory action server ready — 부드러운 실행 사용
+[INFO] [1783602400.580140774] [grasp_executor]: Servers ready  (mode=direct_franka_topic)
+
+============================================================
+  Grasp Executor
+  EE target (world): xyz=[0.503, -0.089, 0.142]
+  EE target (base) : xyz=[0.437, 0.054, 0.007]
+  quat (base)      : [0.892, 0.242, -0.1, 0.369]
+  Hand enc (HW)    : [4096, -4096, 4096, 4096, -683, 4096, 4096, 4096, 0, 4096, 4096, 4096, 683, 4096, 4096, 4096]
+  Approach offset  : 0.10 m
+
+  Grasp Executor  (STEP 1~4)
+  Grasp (base): [0.437, 0.054, 0.007]
+  Approach z  : 0.078 m
+============================================================
+[INFO] [1783602402.208065477] [grasp_executor]: [step_go_home] 홈 이동 중...
+[INFO] [1783602402.209174944] [grasp_executor]: [HOME] Joint-space planning...
+[INFO] [1783602402.339774846] [grasp_executor]: [HOME] OK  32 pts
+[INFO] [1783602402.742536645] [grasp_executor]: [HOME] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [HOME] 초기자세로 이동하시겠습니까? (y/n): y
+[INFO] [1783602404.707239339] [grasp_executor]: [TRAJ] 32 pts, dur=3.02s → /right_arm_controller/follow_joint_trajectory
+[INFO] [1783602404.722412856] [grasp_executor]: [TRAJ] 수락됨. 완료 대기 (최대 30s)...
+[INFO] [1783602408.758276134] [grasp_executor]: [TRAJ] 실행 완료: 'trajectory applied to shared memory'
+[INFO] [1783602408.758598954] [grasp_executor]: [step_go_home] 완료
+
+[APPROACH] Cartesian path (max_step=0.010)...
+[INFO] [1783602408.761267128] [grasp_executor]: [APPROACH] Cartesian → (0.437, 0.125, 0.078)
+[INFO] [1783602408.800564732] [grasp_executor]: [APPROACH] Cartesian OK 100%  15 pts
+[INFO] [1783602408.801140471] [grasp_executor]: [TIMESTAMP] 15 pts  total=3.49s
+[INFO] [1783602409.202220683] [grasp_executor]: [APPROACH] RViz에 경로 표시됨 → 확인 후 y/n 입력
+  [APPROACH] 실행하시겠습니까? (y/n): ^CException in thread Thread-1 (_heartbeat_loop):
+Traceback (most recent call last):
+  File "/usr/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.10/threading.py", line 953, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/user/prime/ChanukHwang/RobotAgentSystem/tools/ros2/dex_ros/isaac-ros/kistar_ws/install/sequence_client/lib/python3.10/site-packages/sequence_client/client.py", line 167, in _heartbeat_loop
+    self._pub_heartbeat.publish(msg)
+  File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/publisher.py", line 70, in publish
+    self.__publisher.publish(msg)
+rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:389
+Traceback (most recent call last):
+  File "/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/scripts/run_scenario1_host.py", line 270, in <module>
+    main()
+  File "/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/scripts/run_scenario1_host.py", line 250, in main
+    rc = stage_robot_pick(summary, args)
+  File "/home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/scripts/run_scenario1_host.py", line 176, in stage_robot_pick
+    return subprocess.run(["bash", "-c", bash]).returncode
+  File "/usr/lib/python3.10/subprocess.py", line 505, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+  File "/usr/lib/python3.10/subprocess.py", line 1146, in communicate
+    self.wait()
+  File "/usr/lib/python3.10/subprocess.py", line 1209, in wait
+    return self._wait(timeout=timeout)
+  File "/usr/lib/python3.10/subprocess.py", line 1959, in _wait
+    (pid, sts) = self._try_wait(0)
+  File "/usr/lib/python3.10/subprocess.py", line 1917, in _try_wait
+    (pid, sts) = os.waitpid(self.pid, wait_flags)
+KeyboardInterrupt
+
+ cy  ⎇  franka U:4  ⓔ base  ~/motie_ws/Topdown_Grasp_sja  130   

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# colcon / ament
+build/
+install/
+log/
+
+# 로컬 산출물
+logs/
+*.h5
+# 수집 산출물(bag mcap 세션당 수십 MB) — 로컬 보관, git 미포함
+collect_logs/
+
+# IDE / 로컬 도구 상태 (개인 환경, 저장소에 포함하지 않음)
+.vscode/
+.history/
+.omc/
+# VS Code 멀티루트 워크스페이스 — folders 경로가 그 PC 의 폴더 배치에 묶여 있어
+# (../../Gen3, ../../../Dual_Arm_Hand_Ctrl 등) 다른 PC 에서는 열리지 않는다.
+*.code-workspace
+

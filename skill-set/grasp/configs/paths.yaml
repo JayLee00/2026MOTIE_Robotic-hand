@@ -1,0 +1,19 @@
+# 머신별 경로/환경 설정
+# 다른 PC에 클론 시 이 파일만 수정하면 됩니다.
+
+# ── Conda 환경 ──────────────────────────────────────────────────────────────
+# 이 PC(cy)는 miniforge3 없음 → miniconda3, env 이름은 grasp_fruit (setup으로 만든 것)
+__CONDA_BASE__: /home/user/miniconda3
+__CONDA_ENV__:  grasp_fruit
+
+# ── ROS2 / Docker ───────────────────────────────────────────────────────────
+__DOCKER_CONTAINER__: ros2_humble
+__ROS_DOMAIN_ID__:    9
+# 로봇 워크스페이스는 Dex_ROS_GWB (HARILAB 정식 GWB 버전)
+__KISTAR_WS__:        /home/kist/GW/Dex_ROS_GWB/isaac-ros/kistar_ws
+
+# 호스트 경로 → 컨테이너 내 경로 마운트 테이블
+# /home/kist/GW 를 동일 경로로 마운트(identity) → kistar_ws·Topdown_Grasp 둘 다 해소됨
+__MOUNT_MAP__:
+  - ["/home/kist/GW", "/home/kist/GW"]
+  - ["/home/kist/ros2_ws",  "/root/ros2_ws"]

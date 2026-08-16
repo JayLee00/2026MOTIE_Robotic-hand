@@ -1,0 +1,21 @@
+# 개체 ID -> 과일/번호/정수인덱스. 자동생성(과일은 폴더명에서).
+# 세부 품종/숙성 등은 필요하면 수동으로 키 추가.
+specimens:
+  tomato_1: {fruit: tomato, obj: 1, index: 0}
+  tomato_2: {fruit: tomato, obj: 2, index: 1}
+  tomato_3: {fruit: tomato, obj: 3, index: 2}
+  tomato_4: {fruit: tomato, obj: 4, index: 3}
+  tomato_5: {fruit: tomato, obj: 5, index: 4}
+  tomato_6: {fruit: tomato, obj: 6, index: 5}
+  tomato_7: {fruit: tomato, obj: 7, index: 6}
+  tomato_8: {fruit: tomato, obj: 8, index: 7}
+  tomato_9: {fruit: tomato, obj: 9, index: 8}
+  tomato_10: {fruit: tomato, obj: 10, index: 9}
+  tomato_11: {fruit: tomato, obj: 11, index: 10}
+  tomato_12: {fruit: tomato, obj: 12, index: 11}
+  tomato_13: {fruit: tomato, obj: 13, index: 12}
+  tomato_14: {fruit: tomato, obj: 14, index: 13}
+  tomato_15: {fruit: tomato, obj: 15, index: 14}
+  tomato_16: {fruit: tomato, obj: 16, index: 15}
+fruit_to_int:
+  tomato: 0

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Backward-compatible wrapper: instantiates right hand with no prefix.
+     For prefixed usage (dual-arm), include kistar_hand_macro.xacro directly. -->
+<robot name="kistar_hand" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find franka_kistar_description)/urdf/kistar_hand_macro.xacro"/>
+  <xacro:kistar_hand prefix=""/>
+</robot>

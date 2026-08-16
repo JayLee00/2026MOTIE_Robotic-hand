@@ -1,0 +1,6 @@
+device: realsense
+width: 640
+height: 480
+fps: 30
+align_to_color: true
+warmup_frames: 30

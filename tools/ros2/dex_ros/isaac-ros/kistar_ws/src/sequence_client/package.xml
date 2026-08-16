@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>sequence_client</name>
+  <version>0.1.0</version>
+  <description>시퀀스 제어권 클라이언트 (Start/End/하트비트/자동 체이닝) — GPU PC 팀용 라이브러리+예제</description>
+  <maintainer email="damilab.knu@gmail.com">prime</maintainer>
+  <license>TODO</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>dual_arm_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

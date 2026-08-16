@@ -1,0 +1,19 @@
+{
+    "base": {
+        "name": "vialplate_24",
+        "pose": [-0.5, 0, 0.2, 0.707, 0, 0, 0.707],
+        "usd_path": "vialplate_24.usd"
+    },
+    "obj": {
+        "name": "vialplateobj_3",
+        "pose": [0.6, 0, 0.3, 1, 0, 0, 0],
+        "usd_path": "vialplateobj_3.usd",
+        "place_axis": "-z"
+    },
+    "grasps": {
+        "path": "grasps.json",
+        "max_num": 50
+    },
+    "stable_poses_path": "stable_poses_vialplateobj_3_above_vialplate_24.npy",
+    "save_exp_result_path": "exp_results.npy"
+}

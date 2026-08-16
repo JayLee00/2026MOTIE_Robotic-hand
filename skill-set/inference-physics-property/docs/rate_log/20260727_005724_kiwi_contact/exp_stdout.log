@@ -1,0 +1,94 @@
+[INFO] [1785081449.604676853] [deploy_ros2_bridge]: safe servo-on: 현재 손 자세를 q_target 으로 먼저 발행 후 servo on (mode=1)
+추론할 과일  [1]자두 [2]키위 [3]토마토 [4]레몬 : [통합모델] 선택=m3_dX, 변위=False, 과일=kiwi, 포즈=kiwi.txt
+[pose] 과일 포즈 적용: kiwi.txt -> GRIP=[4107, -4097, 767, 988, -1481, 3515, 1072, 128, -683, 3213, 1168, 508, 1372, 4097, 527, 136]
+[threshold] kiwi: 파지=10.0N, 스퀴즈=13.0N
+/home/cy/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:180: UserWarning: CUDA initialization: Unexpected error from cudaGetDeviceCount(). Did you run some cuda functions before calling NumCudaDevices() that might have already set an error? Error 804: forward compatibility was attempted on non supported HW (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+  마스킹=True (출처: 체크포인트 자동), 임계=2.5N
+  [자동] 공통정규화 min/max=[0.679,6.757] (체크포인트 기준)
+[추론엔진] fruit=kiwi, 마스킹=ON, 정규화[0.6789,6.7574], 경계=[2.07, 3.672]
+[measure] 준비 완료. 과일=kiwi, 모델=260707_2244_lstm_m3_dX_lr0.001_do0.3_h192_L2_s42.pth
+
+--- 데모 0 (계측) ---
+=================== 안전 위치 (손만) ===================
+=================== 파지 위치 (손만) ===================
+[move_hand_to_target_until_force] finger [0, 1, 2, 3] threshold(10.0N) 미도달 — target 위치 유지.
+=================== 스퀴즈 모션 ===================
+  [squeeze] 스퀴즈 전 1.0s 대기
+[move_hand_to_target_until_force] finger [0] threshold(13.0N) 미도달 — target 위치 유지.
+  [squeeze] threshold(13.0) 도달 → 1.0s holding
+  [squeeze] thumb 만 파지 position 으로 복귀 (나머지 finger 는 파지 유지)
+
+----------------------------------------------------
+[measure] 스퀴즈 계측 (학습 대비 격차 확인용)
+  add_sample 호출 = 150,  valid(적재) = 150
+  유효 rate       =   97.8 Hz   (수집시간 1.52s)
+  downsample 스텝 = 15   (FACTOR=10, MIN_LEN=10)
+  finger별 최대 Fz = [1.7000000476837158, 0.5, 0.5, 0.0]
+    thumb 최대 = 1.70 N   (스퀴즈 임계 13.0 N)
+----------------------------------------------------
+
+
+================================================
+  [추론 결과] kiwi
+    절대강성 = 1.927
+    등급     = soft  (class 0)
+================================================
+
+
+다음 동작  [1] 다시 스퀴즈+추론  [2] 안전위치 복귀 후 다시 스퀴즈  [3] 안전위치 복귀 후 종료 : 
+--- 데모 1 (계측) ---
+=================== 스퀴즈 모션 ===================
+  [squeeze] 스퀴즈 전 1.0s 대기
+[move_hand_to_target_until_force] finger [0] threshold(13.0N) 미도달 — target 위치 유지.
+  [squeeze] threshold(13.0) 도달 → 1.0s holding
+  [squeeze] thumb 만 파지 position 으로 복귀 (나머지 finger 는 파지 유지)
+
+----------------------------------------------------
+[measure] 스퀴즈 계측 (학습 대비 격차 확인용)
+  add_sample 호출 = 150,  valid(적재) = 150
+  유효 rate       =   97.7 Hz   (수집시간 1.52s)
+  downsample 스텝 = 15   (FACTOR=10, MIN_LEN=10)
+  finger별 최대 Fz = [2.0999999046325684, 0.0, 0.0, 0.0]
+    thumb 최대 = 2.10 N   (스퀴즈 임계 13.0 N)
+----------------------------------------------------
+
+
+================================================
+  [추론 결과] kiwi
+    절대강성 = 1.942
+    등급     = soft  (class 0)
+================================================
+
+
+다음 동작  [1] 다시 스퀴즈+추론  [2] 안전위치 복귀 후 다시 스퀴즈  [3] 안전위치 복귀 후 종료 : 
+--- 데모 2 (계측) ---
+=================== 안전 위치 (손만) ===================
+=================== 파지 위치 (손만) ===================
+[move_hand_to_target_until_force] finger [0, 1, 2, 3] threshold(10.0N) 미도달 — target 위치 유지.
+=================== 스퀴즈 모션 ===================
+  [squeeze] 스퀴즈 전 1.0s 대기
+[move_hand_to_target_until_force] finger [0] threshold(13.0N) 미도달 — target 위치 유지.
+  [squeeze] threshold(13.0) 도달 → 1.0s holding
+  [squeeze] thumb 만 파지 position 으로 복귀 (나머지 finger 는 파지 유지)
+
+----------------------------------------------------
+[measure] 스퀴즈 계측 (학습 대비 격차 확인용)
+  add_sample 호출 = 150,  valid(적재) = 150
+  유효 rate       =   97.8 Hz   (수집시간 1.52s)
+  downsample 스텝 = 15   (FACTOR=10, MIN_LEN=10)
+  finger별 최대 Fz = [1.5, 0.4000000059604645, 0.5, 0.0]
+    thumb 최대 = 1.50 N   (스퀴즈 임계 13.0 N)
+----------------------------------------------------
+
+
+================================================
+  [추론 결과] kiwi
+    절대강성 = 1.943
+    등급     = soft  (class 0)
+================================================
+
+
+다음 동작  [1] 다시 스퀴즈+추론  [2] 안전위치 복귀 후 다시 스퀴즈  [3] 안전위치 복귀 후 종료 : =================== 안전 위치 복귀 후 종료 ===================
+
+계측 완료.

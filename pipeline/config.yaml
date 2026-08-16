@@ -1,0 +1,112 @@
+# 단일 명령 파이프라인 설정 — '물체 파지 → 손 안 조작 → 물성 추론 → 물체 내려놓기'
+#
+# 명령 문자열의 {placeholder} 는 run_pipeline.py 가 아는 키만 치환한다
+# (ros2 메시지 인자의 리터럴 중괄호 "{data: 1}" 은 건드리지 않는다).
+#
+# ⚠ stages.*.command 한 줄 = 실제 로봇 동작. E-stop 옆 인원 상주 필수.
+
+ros:
+  domain_id: 9                      # 9 = 라이브 로봇 버스 (제어 PC와 공유)
+  rmw: rmw_fastrtps_cpp
+  sequence_topic: /sequence_state          # dual_arm_msgs/SequenceState (latched)
+  sequence_shm_topic: /sequence/shm_state  # Int32MultiArray [seq_id, state, owner] (동일 내용, 폴백)
+  move_group_node: move_group              # 트윈 1개만 존재해야 한다
+  camera_topics:                           # ⚠ 카메라는 Control PC 가 발행한다 (여기서 띄우지 않음)
+    - /front_cam/front/color/image_raw
+    - /front_cam/front/aligned_depth_to_color/image_raw
+    - /front_cam/front/color/camera_info
+
+# collab_policy.md 고정 배정 번호 (client_id 도 동일, 0 금지)
+sequence_numbers:
+  grasp: 1
+  inhand: 2
+  stiffness: 3
+  place: 4
+
+timeouts_s:
+  # DDS 디스커버리 대기 상한. 고정 sleep 이 아니라 "기대 발행자가 보일 때까지" 폴링한다.
+  # ⚠ 2초 고정으로 판정하면 멀쩡한 arbiter/카메라를 '없다'고 오판한다(실측: 8초까지 걸림).
+  #   이 PC 의 Fast DDS 프로파일은 유니캐스트 announce 를 쓰고 maxInitialPeersRange=120 이라
+  #   announce 대상이 많아 첫 발견이 느릴 수 있다. 정상 발견되면 즉시 통과하므로 손해는 없다.
+  discovery: 30
+  grasp: 420          # SAM3 검출 + 파지계산 + 로봇 pick
+  inhand: 420         # pose 이동 + HDF5 손 궤적 재생 + squeeze
+  stiffness: 420      # 파지확인 + squeeze + 추론
+  place: 420          # 인지 + 배치 + release + parent_pose 복귀 (~1.5분 + 여유)
+  services_ready: 900 # Molmo 로딩 ~1분 (콜드 스타트는 더 걸릴 수 있음)
+  place_server_ready: 300
+  twin_ready: 180
+
+# 강성 모델이 지원하는 과일 → deploy_task3_ros2.py 의 stdin 번호
+# ⚠ 모델에 orange 가 없어 감귤류인 lemon 으로 대용한다. 데모 과일이 바뀌면 여기를 바꾼다.
+stiffness_fruit_numbers:
+  plum: 1
+  kiwi: 2
+  tomato: 3
+  lemon: 4
+
+# 파지 대상(--fruit) → 강성 대용 과일 기본 매핑. 없으면 default 사용.
+stiffness_fruit_for:
+  default: lemon
+  orange: lemon
+  tangerine: lemon
+  lemon: lemon
+  kiwi: kiwi
+  tomato: tomato
+  plum: plum
+
+# 상시 서버 (파이프라인 시작 전에 떠 있어야 하는 것들)
+services:
+  # place 모델 마이크로서비스 5종 (conda 환경별 HTTP 서버)
+  health_ports: {molmo: 8810, sam: 8811, anyplace: 8801, igr: 8816, grid: 8815}
+  launch: bash {place_dir}/vision_pipeline/run_services.sh
+
+  # MoveIt 디지털 트윈 + RViz — 이 PC 에서 **정확히 1개**만 (중복 /move_action = 전 이동 실패)
+  twin_launch: >-
+    ros2 launch franka_kistar_bringup dual_fr3_kistar_moveit.launch.py
+    joint_state_mode:=direct robot_ip:=192.168.0.100 use_rviz:=true
+
+  # place skill 서버 — seq 1 RUNNING 에서 parent prewarm, seq 4 에서 실행 (상시 대기)
+  place_server: >-
+    cd {place_dir} &&
+    /usr/bin/python3 -u -m vision_pipeline.skill_server scenario=fruit hand_pc=true
+  place_server_ready_pattern: "place skill READY"
+
+  # /place/status 이벤트 로거 (선택)
+  place_logger: /usr/bin/python3 -u {root}/tools/diagnostics/place_logger.py
+
+stages:
+  # ── seq 1 : 물체 파지 ────────────────────────────────────────────────────
+  # --yes: 확인 프롬프트 자동 승인. --query: Query> 프롬프트 생략 + SAM3 검출 키워드 지정.
+  grasp:
+    command: >-
+      ros2 topic pub --once /hand/right/cmd_mode std_msgs/msg/Int32 "{data: 1}" &&
+      cd {grasp_dir} &&
+      /usr/bin/python3 scripts/run_scenario1_host.py
+      --calibration {calibration}
+      --execute_robot --yes --query "{query}"
+
+  # ── seq 2 : 손 안 조작 ───────────────────────────────────────────────────
+  inhand:
+    command: >-
+      ros2 topic pub --once /hand/right/cmd_mode std_msgs/msg/Int32 "{data: 1}" &&
+      cd {inhand_dir} &&
+      /usr/bin/python3 scripts/inhand_sequence_2.py
+
+  # ── seq 3 : 물성(강성) 추론 ──────────────────────────────────────────────
+  # 과일 선택 프롬프트를 echo 로 주입한다 ([1]자두 [2]키위 [3]토마토 [4]레몬).
+  stiffness:
+    command: >-
+      ros2 topic pub --once /hand/right/cmd_mode std_msgs/msg/Int32 "{data: 1}" &&
+      cd {physics_dir} &&
+      source env.sh &&
+      echo {fruit_num} | python3 stiffness_deploy_ros2/launch/deploy_task3_ros2.py {gui_flag}
+
+  # ── seq 4 : 물체 내려놓기 ────────────────────────────────────────────────
+  # 상시 서버(services.place_server)가 담당하므로 단계 진입 시 spawn 하지 않는다.
+  # 러너는 arbiter 의 seq 4 DONE 만 관측한다.
+  place:
+    command: null
+
+grasp:
+  calibration: "{grasp_dir}/configs/calibration/extrinsic_20260612_170053.json"

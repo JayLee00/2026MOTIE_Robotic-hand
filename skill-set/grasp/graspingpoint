@@ -1,0 +1,199 @@
+Grasping Pose 생성 — 전체 상세 (코드 경로 포함)
+진입점 (누가 호출하나)
+실행 방식	파일	Stage 2 호출
+오프라인	scripts/run_pipeline.py	stage_grasp()
+인터랙티브	scripts/run_pipeline_interactive.py	stage_grasp()
+시나리오1(호스트)	scripts/run_scenario1_host.py	stage_grasp() (:113)
+→ 모두 pipeline_core.py stage_grasp()(:184)가 scripts/run_topdown_grasp.py를 subprocess로 실행. 좌표 생성의 본체 = run_topdown_grasp.py.
+
+Stage 0-1: 입력 준비 (좌표 생성 전)
+단계	파일	산출
+카메라 캡처	scripts/ros_camera_grab.py	NPZ (rgb, depth(m), K)
+SAM3 검출	scripts/run_sam3_only_stage.py	{stem}_mask.png (물체 영역)
+Stage 2: 파지 좌표 계산 — run_topdown_grasp.py main()
+① 마스크 → 카메라 3D 포인트 (:371)
+
+obj_pts_cam = backproject_mask(depth, K, mask, depth_scale)   # 함수 def :68
+핀홀 역투영: X=(u-cx)·Z/fx, Y=(v-cy)·Z/fy, Z=depth → 카메라 좌표계 점구름.
+
+② 노이즈 제거 (:379)
+
+obj_pts_cam = statistical_outlier_removal(obj_pts_cam, k=20, std_ratio=2.0)  # def :85
+k-NN 평균거리 > mean+2σ 인 점 제거 (SOR).
+
+③ 프레임 변환 로드 (:386-421)
+
+T_base_camera  = load_base_to_camera_transform(calib)   # frame_transform.py:26  (핸드아이 캘리브)
+T_world_base   = load_world_to_base_transform(calib)    # frame_transform.py:41  (베이스 마운트 기울기)
+T_world_camera = T_world_base @ T_base_camera           # :421
+출처: 캘리브 JSON configs/calibration/extrinsic_20260612_170053.json의 T_base_camera, T_world_base.
+
+④ 카메라 3D → world 3D (:426-428)
+
+obj_pts_world = (T_world_camera @ pts_h.T).T[:, :3]
+⑤ 오프셋 값 결정 (우선순위) (:430-458)
+
+arm.yaml ee_correction (기본)  →  fruits.yaml[query] override  →  CLI --x/y_offset (최우선)
+값 로드: utils/arm.py → EE_YAW_DEG(-45°), EE_X_OFFSET_M(0.01), EE_Y_OFFSET_M(-0.01), GRASP_Z_OFFSET_M(0.13) (configs/arm.yaml).
+
+⑥ ★핵심★ 파지 자세 계산 = build_topdown_pose() (def :97-182)
+위치 (어디를 잡나)
+
+
+z_top = percentile(z_vals, 95)                      # :112  물체 윗면 높이
+z_thresh = percentile(z_vals, 100-30)               # :115  상위 30%
+top_pts = 점들[z >= z_thresh]                        # :116  가장 두꺼운 윗부분
+cx, cy = top_pts XY 평균                             # :117-118  파지 중심
+방향 (어떻게 돌려 잡나 — PCA)
+
+
+_,_,Vt = svd(xy_centered); major = Vt[0]            # :123-124  최대분산 축
+alpha = atan2(major_y, major_x)                     # :125  장축 각도
+alpha_perp = alpha + π/2                            # :130  중지 ⊥ 장축
+# 원기둥 180° 대칭 → EE_YAW_DEG 기준 편차 최소 후보 선택
+alpha_final = c1 if |c1|<=|c2| else c2              # :138-140
+yaw = radians(EE_YAW_DEG) + alpha_final             # :143  최종 회전
+회전행렬 + 오프셋 + 최종 좌표
+
+
+R_down = Rx(π)                                      # :148  EE Z → world -Z (수직 하강)
+R_yaw  = Rz(yaw)                                    # :155  회전
+ox = ee_x·cos(αf) - ee_y·sin(αf)                    # :164  오프셋도 PCA회전 반영
+oy = ee_x·sin(αf) + ee_y·cos(αf)                    # :165
+T[:3,:3] = R_yaw @ R_down                           # :168
+T[:3, 3] = [cx+ox, cy+oy, z_top+z_offset]           # :169  ★최종 파지 좌표(world)★
+반환: (T_world_ee 4×4, info).
+
+⑦ 저장 (:461-514)
+
+T_world_ee, pose_info = build_topdown_pose(...)     # :461
+...
+"base_pose": pose_payload(T_world_ee),              # :492  (frame_transform.py:82)
+→ data/outputs/{stem}_topdown_summary.json:
+
+
+"grasps": [{
+  "base_pose": {"xyz":[x,y,z], "quat_xyzw":[...], "transform_matrix":[[...]]},  ← 최종 파지 포즈(world)
+  "joint_angles_enc": [...]   ← 손 파지 자세
+}],
+"T_world_base": [[...]]        ← 실행 시 world→base 변환용
+⑧ 시각화 저장 (:518-528)
+build_overlay_canvas(:238) + save_overlay(:259) → {stem}_topdown_overlay.png (좌표 텍스트 + PCA 화살표).
+
+설정 파일 (좌표에 영향)
+파일	역할
+configs/arm.yaml	ee_correction(yaw/x/y offset), grasp_z_offset, pointcloud percentile
+configs/fruits.yaml	과일별 오프셋 override
+configs/calibration/*.json	T_base_camera, T_world_base
+scripts/utils/arm.py	arm.yaml → 상수 export
+실행 시 좌표 변환 (파지 실행 단계 — 별개)
+grasp.py _execute() (:793):
+
+
+xyz_w, quat_w = base_pose 읽기                       # :796-797  world 좌표
+xyz_b, quat_b = world_to_base(T_wb, xyz_w, quat_w)  # :802  world→base(right_fr3_link0) 변환 (def :87)
+target = self._make_pose(*xyz_b, *quat_b)           # :833  MoveIt 전송용 (frame_id=REF_FRAME)
+한 줄 요약 흐름
+
+카메라 depth+K
+ → backproject (:371) → SOR (:379)
+ → T_world_camera 로 world 변환 (:428)
+ → build_topdown_pose (:97): z_top·centroid·PCA yaw·offset → T[:3,3]=[cx+ox,cy+oy,z_top+z_offset] (:169)
+ → summary JSON base_pose 저장 (:492)
+ → (실행 시) world_to_base (grasp.py:802) → MoveIt IK
+
+
+
+
+
+
+
+
+
+
+파지 조정 노브 4종 상세
+① ee_correction.yaw_deg — 손 회전 (엄지/손가락이 어느 쪽을 잡나)
+정의: 핸드 장착 회전 오프셋 (world Z축 기준, 기본 -45°).
+코드: run_topdown_grasp.py:143
+
+
+yaw = radians(ee_yaw_deg) + alpha_final   # 최종 회전 = 장착오프셋(-45°) + PCA보정
+효과: 손 전체를 수직축 기준으로 회전 → 엄지 vs (검지·중지·약지)가 물체의 어느 양옆을 잡을지 결정.
+
+
+     yaw 회전 →     엄지 ●        엄지
+                   ╲              │
+     [물체]         [물체]        [물체]
+                   ╱              │
+                  손가락      손가락
+튜닝:
+
+엄지/손가락이 엉뚱한 방향에서 잡으면 → yaw를 ±90° 돌림
+길쭉한 물체는 PCA(alpha_final)가 자동 보정, 원형은 -45° 고정이 지배 언제: 손가락이 물체를 가로/세로 반대로 잡을 때
+② ee_correction.x_offset_m / y_offset_m — 손바닥 XY 이동 (접촉 위치 미세조정)
+정의: EE(손바닥) XY 위치 보정 (기본 x=0.01, y=-0.01 m).
+코드: run_topdown_grasp.py:163-169
+
+
+# offset을 alpha_final(PCA 회전)만큼 2D 회전 → world XY로
+ox = ee_x*cos(αf) - ee_y*sin(αf)
+oy = ee_x*sin(αf) + ee_y*cos(αf)
+T[:3,3] = [cx + ox, cy + oy, ...]        # 파지 중심 + 오프셋
+효과: 손바닥(빨간 점 위)을 수평으로 살짝 밀어서, 손가락 닫히는 중심이 물체 중심에 오게 함. (fr3_link8 원점과 실제 손가락 접촉면 사이 어긋남 보정)
+
+
+offset 0:  손가락이 물체 한쪽만 침     offset 적용: 손가락이 물체를 균형있게 감쌈
+   [물체]│손                          [물체]
+        └손가락 치우침              손│  │손 (양옆 균형)
+튜닝:
+
+손가락이 한쪽으로 치우쳐 물체를 밀어내면 → 반대로 offset 증가
+⚠️ EE 프레임 기준이라 yaw 방향 따라 x/y 방향이 회전함 언제: 손가락 하나는 물체에 닿고 반대쪽은 허공일 때
+③ hand.yaml abduction_deg + finger_bend_deg — 손가락 벌림/굽힘
+정의: configs/hand.yaml
+
+
+abduction_deg: 15.0          # 손가락 좌우 벌림 (index -, ring +)
+hand_grasp:
+  thumb_j1_deg:  90.0        # 엄지 위치
+  thumb_j2_deg: -90.0
+  finger_bend_deg: 90.0      # 검지·중지·약지 굽힘각 (90=완전히 오므림)
+코드: hand.yaml → utils/hand.py → encoder 값 → grasp.py가 /hand/right/q_target로 발행.
+효과:
+
+abduction(벌림): 크면 손가락 넓게 벌어짐(큰 물체), 작으면 좁게(작은 물체)
+finger_bend(굽힘): 90°=꽉 오므림, 작으면 느슨하게 쥠
+
+abduction 넓게        finger_bend 90 (꽉)     finger_bend 작게 (느슨)
+ 손 ╲   ╱ 손           →  ●  ←                  →   ●   ←
+   [큰물체]              꽉 조임                  살짝 닿음
+튜닝:
+
+물체가 손가락 사이에 안 들어가면 → abduction ↑
+으스러뜨리거나 밀면 → finger_bend ↓ (덜 오므림)
+헛잡으면(안 닿음) → finger_bend ↑ 또는 abduction ↓ 언제: 물체 크기 대비 손 벌림/조임이 안 맞을 때
+④ grasp_z_offset_m — 파지 깊이 (얼마나 내려가 쥐나)
+정의: SAM3 검출 윗면(z_top) 위에서 실제 파지 목표까지 오프셋 (기본 0.13 m, world Z).
+코드: run_topdown_grasp.py:169
+
+
+T[:3,3] = [..., z_top + z_offset]    # 윗면 위 0.13m
+효과: EE(flange)는 손가락 길이만큼 물체 위에 떠 있어야 손가락이 내려가 옆면을 잡음. z_offset ≈ 손가락이 닿는 깊이 보정.
+
+
+z_offset 큼 (높음)      적당              작음 (낮음)
+  flange ↑ (멀리)      flange           flange (너무 낮음)
+  손가락 ─ 꼭대기만     손가락 ─ 중턱      손가락 ─ 바닥/충돌
+   [물체]              [물체]            [물체]💥
+튜닝:
+
+손가락이 꼭대기만 스치면 → z_offset ↓ (더 깊이)
+flange/손이 물체에 부딪히면 → z_offset ↑ 언제: 손가락이 물체 적도(중턱)를 못 잡고 위/아래로 빗나갈 때 · 과일별로 fruits.yaml에서 개별 조정 (lemon 0.17, tennis 0.17 등)
+요약 진단표
+증상	조정 노브
+손가락이 물체 양옆 반대로 잡음	① yaw_deg
+손가락이 한쪽만 닿고 반대는 허공	② x/y_offset
+물체가 손가락 사이에 안 맞음	③ abduction
+물체를 으스러뜨림/밀어냄	③ finger_bend ↓
+꼭대기만 스침 / 못 잡음	④ z_offset ↓
+손이 물체에 충돌	④ z_offset ↑

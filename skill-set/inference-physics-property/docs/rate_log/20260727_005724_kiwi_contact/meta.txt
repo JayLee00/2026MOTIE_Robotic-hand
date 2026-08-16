@@ -1,0 +1,9 @@
+mode=exp
+label=kiwi_contact
+topics=/hand/right/q_target /paxini/right/ft /hand/right/joint_states
+date=2026-07-27T00:57:27+09:00
+git_commit=8878e47
+git_dirty=6 files
+python=/usr/bin/python3 (Python 3.10.12)
+kernel=6.8.0-124-generic
+ROS_DOMAIN_ID=9 RMW=rmw_fastrtps_cpp

@@ -1,0 +1,55 @@
+poses:
+  child_pose:
+    ee_pose:
+      ee_link: right_fr3_link8
+      frame: base
+      orientation_xyzw:
+      - -0.115776
+      - 0.062299
+      - 0.89339
+      - 0.429615
+      position:
+      - 0.302297
+      - 0.044399
+      - 0.45085
+    group: right_arm
+    joints:
+      right_fr3_joint1: -0.7766174674034119
+      right_fr3_joint2: 1.531194806098938
+      right_fr3_joint3: 0.5287513136863708
+      right_fr3_joint4: -2.2483937740325928
+      right_fr3_joint5: 0.8071298599243164
+      right_fr3_joint6: 1.8068398237228394
+      right_fr3_joint7: 0.5361038446426392
+  T_preplace:
+    group: right_arm
+    joints:
+      right_fr3_joint1: -0.6707
+      right_fr3_joint2: 0.4210
+      right_fr3_joint3: 1.1203
+      right_fr3_joint4: -2.2079
+      right_fr3_joint5: -0.0171
+      right_fr3_joint6: 2.3742
+      right_fr3_joint7: 0.6687
+  parent_pose:
+    ee_pose:
+      ee_link: right_fr3_link8
+      frame: base
+      orientation_xyzw:
+      - -0.751385
+      - 0.342201
+      - 0.138979
+      - 0.546812
+      position:
+      - 0.589305
+      - -0.290138
+      - 0.739393
+    group: right_arm
+    joints:
+      right_fr3_joint1: -0.713431179523468
+      right_fr3_joint2: 0.008521816693246365
+      right_fr3_joint3: 0.993615448474884
+      right_fr3_joint4: -2.2386441230773926
+      right_fr3_joint5: 0.538030743598938
+      right_fr3_joint6: 2.456475257873535
+      right_fr3_joint7: 0.6705372929573059

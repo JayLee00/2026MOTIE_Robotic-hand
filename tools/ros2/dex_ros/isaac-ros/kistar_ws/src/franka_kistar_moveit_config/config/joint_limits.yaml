@@ -1,0 +1,36 @@
+joint_limits:
+  fr3_joint1:
+    has_velocity_limits: true
+    max_velocity: 2.62
+    has_acceleration_limits: true
+    max_acceleration: 2.0
+  fr3_joint2:
+    has_velocity_limits: true
+    max_velocity: 2.62
+    has_acceleration_limits: true
+    max_acceleration: 2.0
+  fr3_joint3:
+    has_velocity_limits: true
+    max_velocity: 2.62
+    has_acceleration_limits: true
+    max_acceleration: 2.0
+  fr3_joint4:
+    has_velocity_limits: true
+    max_velocity: 2.62
+    has_acceleration_limits: true
+    max_acceleration: 2.0
+  fr3_joint5:
+    has_velocity_limits: true
+    max_velocity: 5.26
+    has_acceleration_limits: true
+    max_acceleration: 3.0
+  fr3_joint6:
+    has_velocity_limits: true
+    max_velocity: 4.18
+    has_acceleration_limits: true
+    max_acceleration: 3.0
+  fr3_joint7:
+    has_velocity_limits: true
+    max_velocity: 5.26
+    has_acceleration_limits: true
+    max_acceleration: 3.0

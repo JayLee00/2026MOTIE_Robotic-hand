@@ -1,0 +1,126 @@
+<?xml version="1.0"?>
+<!-- Dual-arm FR3 + KISTAR hand URDF.
+     Both arms share a common "base" link, each tilted 45 degrees.
+
+     Left hand: currently uses right hand macro as placeholder.
+     To swap in the real left hand:
+       1. Include kistar_l_hand_macro.xacro
+       2. Change <xacro:kistar_hand prefix="left_"/>
+          to     <xacro:kistar_l_hand prefix="left_"/>
+       3. Adjust left_hand_mount_rpy if needed -->
+<robot name="dual_fr3_kistar" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find franka_description)/robots/common/franka_robot.xacro"/>
+  <xacro:include filename="$(find franka_kistar_description)/urdf/kistar_hand_macro.xacro"/>
+  <!-- TODO: <xacro:include filename="$(find franka_kistar_description)/urdf/kistar_l_hand_macro.xacro"/> -->
+
+  <!-- ==================== Arguments ==================== -->
+  <xacro:arg name="ros2_control"        default="false"/>
+  <xacro:arg name="left_robot_ip"       default=""/>
+  <xacro:arg name="right_robot_ip"      default=""/>
+  <xacro:arg name="use_fake_hardware"   default="true"/>
+  <xacro:arg name="fake_sensor_commands" default="true"/>
+
+  <!-- Arm base poses: base → each arm's link0 -->
+  <xacro:arg name="left_arm_xyz"  default="0.066 0.122 0.359"/>
+  <xacro:arg name="left_arm_rpy"  default="-0.785 0 0"/>
+  <xacro:arg name="right_arm_xyz" default="0.066 -0.122 0.359"/>
+  <xacro:arg name="right_arm_rpy" default="0.785 0 0"/>
+
+  <!-- Hand mount orientation (yaw rotated 180° vs prior 2.355 = -0.7866 rad) -->
+  <xacro:arg name="left_hand_mount_rpy"  default="0 0 -0.7866"/>
+  <xacro:arg name="right_hand_mount_rpy" default="0 0 -0.7866"/>
+
+  <!-- ==================== Common base ==================== -->
+  <link name="base"/>
+
+  <!-- ==================== LEFT ARM (FR3) ==================== -->
+  <xacro:franka_robot
+      arm_id="fr3"
+      arm_prefix="left_"
+      connected_to=""
+      joint_limits="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/joint_limits.yaml')}"
+      inertials="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/inertials.yaml')}"
+      kinematics="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/kinematics.yaml')}"
+      accelerometer_config="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/accelerometers.yaml')}"
+      dynamics="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/dynamics.yaml')}"
+      gazebo="false"
+      hand="false"
+      ee_id="none"
+      special_connection=""
+      xyz_ee="0 0 0"
+      rpy_ee="0 0 0"
+      tcp_xyz="0 0 0.1034"
+      tcp_rpy="0.0 0 0"
+      safety_distance="0.03"
+      with_sc="false"
+      ros2_control="$(arg ros2_control)"
+      robot_ip="$(arg left_robot_ip)"
+      use_fake_hardware="$(arg use_fake_hardware)"
+      fake_sensor_commands="$(arg fake_sensor_commands)"
+      gazebo_effort="false"
+      no_prefix="false"
+      description_pkg="franka_description"
+  />
+
+  <joint name="base_to_left_fr3" type="fixed">
+    <parent link="base"/>
+    <child link="left_fr3_link0"/>
+    <origin xyz="$(arg left_arm_xyz)" rpy="$(arg left_arm_rpy)"/>
+  </joint>
+
+  <!-- Left hand (placeholder: right hand macro. Swap to kistar_l_hand when ready) -->
+  <xacro:kistar_hand prefix="left_"/>
+  <!-- TODO: <xacro:kistar_l_hand prefix="left_"/> -->
+
+  <joint name="left_kistar_hand_mount" type="fixed">
+    <parent link="left_fr3_link8"/>
+    <child link="left_kistar_hand"/>
+    <origin xyz="0 0 0" rpy="$(arg left_hand_mount_rpy)"/>
+  </joint>
+
+  <!-- ==================== RIGHT ARM (FR3) ==================== -->
+  <xacro:franka_robot
+      arm_id="fr3"
+      arm_prefix="right_"
+      connected_to=""
+      joint_limits="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/joint_limits.yaml')}"
+      inertials="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/inertials.yaml')}"
+      kinematics="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/kinematics.yaml')}"
+      accelerometer_config="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/accelerometers.yaml')}"
+      dynamics="${xacro.load_yaml('$(find franka_kistar_description)/robots/fr3/dynamics.yaml')}"
+      gazebo="false"
+      hand="false"
+      ee_id="none"
+      special_connection=""
+      xyz_ee="0 0 0"
+      rpy_ee="0 0 0"
+      tcp_xyz="0 0 0.1034"
+      tcp_rpy="0.0 0 0"
+      safety_distance="0.03"
+      with_sc="false"
+      ros2_control="$(arg ros2_control)"
+      robot_ip="$(arg right_robot_ip)"
+      use_fake_hardware="$(arg use_fake_hardware)"
+      fake_sensor_commands="$(arg fake_sensor_commands)"
+      gazebo_effort="false"
+      no_prefix="false"
+      description_pkg="franka_description"
+  />
+
+  <joint name="base_to_right_fr3" type="fixed">
+    <parent link="base"/>
+    <child link="right_fr3_link0"/>
+    <origin xyz="$(arg right_arm_xyz)" rpy="$(arg right_arm_rpy)"/>
+  </joint>
+
+  <!-- Right hand -->
+  <xacro:kistar_hand prefix="right_"/>
+
+  <joint name="right_kistar_hand_mount" type="fixed">
+    <parent link="right_fr3_link8"/>
+    <child link="right_kistar_hand"/>
+    <origin xyz="0 0 0" rpy="$(arg right_hand_mount_rpy)"/>
+  </joint>
+
+</robot>

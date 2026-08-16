@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# gohome — 로봇 오른팔을 HOME 자세로 이동 (환경 소싱 포함, 어디서든 실행)
+# 사용: gohome            (alias 등록 후)
+#       gohome --yes      (확인 없이)
+set -e
+unset PYTHONPATH PYTHONHOME   # conda 오염 제거 (rclpy=py3.10)
+source /opt/ros/humble/setup.bash
+source /home/user/prime/ChanukHwang/RobotAgentSystem/tools/ros2/fr_ws/install/setup.bash
+source /home/user/prime/ChanukHwang/RobotAgentSystem/tools/ros2/dex_ros/isaac-ros/kistar_ws/install/setup.bash
+export ROS_DOMAIN_ID=9 RMW_IMPLEMENTATION=rmw_fastrtps_cpp ROS_LOCALHOST_ONLY=0
+exec /usr/bin/python3 /home/user/prime/ChanukHwang/RobotAgentSystem/skill-set/grasp/scripts/go_home.py "$@"

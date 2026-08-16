@@ -1,0 +1,207 @@
+shm
+rs
+nd
+python3 ~/.Dual_Arm_Hand_Ctrl/tools/paxini_writer.py --hand r
+
+source env.sh && python3 stiffness_deploy_ros2/launch/deploy_ros2.py
+
+ros2 topic hz /hand/right/q_target
+
+ros2 topic hz /paxini/right/ft
+
+=========================================================================
+A.1. 실제 실행 (로봇 O)
+
+cd ~/stiffness_deploy_ros2
+./run_deploy_gui.sh            # 전체 배포 + GUI 자동
+
+# 또는 수동:
+source env.sh && python3 stiffness_deploy_ros2/launch/deploy_ros2.py
+
+# GUI 없이(개발용):
+./run_deploy_gui.sh --no-gui
+
+=========================================================================
+A.2. 실제 실행 (로봇 O)
+
+cd ~/stiffness_deploy_ros2
+source env.sh
+python3 stiffness_deploy_ros2/gui/stiffness_gui.py
+
+cd ~/stiffness_deploy_ros2
+./run_task3_gui.sh
+
+=========================================================================
+B. 테스트용 (로봇 X)
+로봇·워크스페이스 없이 GUI만 확인. 둘 다 env.sh만 source.
+
+cd ~/stiffness_deploy_ros2
+python3 stiffness_deploy_ros2/gui/stiffness_gui.py --demo
+
+=========================================================================
+C. SOTA 앙상블 모델 테스트 (로봇 O)
+baseline 5-seed 앙상블(Phase_SOTA.md §15). 단일 grasp → 5개 순전파 평균.
+로봇 거동은 그대로, 추론만 앙상블로 바뀜.
+
+# 켜기/끄기: real_deploy_inference_final.py 상단
+#   USE_SOTA_ENSEMBLE = True   # 앙상블(권고) / False = 기존 단일모델로 롤백
+# 체크포인트: models/sota_m3_dX_baseline_s{42,53,64,71,82}.pth (이미 번들됨)
+
+# --- 사전 준비 (맨 위 순서와 동일) ---
+shm
+rs
+nd
+python3 ~/.Dual_Arm_Hand_Ctrl/tools/paxini_writer.py --hand r
+
+# --- C.1 반복 파지·추론 (deploy_ros2) ---
+cd ~/stiffness_deploy_ros2
+source env.sh && python3 stiffness_deploy_ros2/launch/deploy_ros2.py
+
+# --- C.2 시퀀스 이어받기 (deploy_task3_ros2, Stiffness=3 단계) ---
+cd ~/stiffness_deploy_ros2
+source env.sh && python3 stiffness_deploy_ros2/launch/deploy_task3_ros2.py
+
+# 앙상블 적용 확인 — 실행 로그에 아래가 찍히면 정상:
+#   [추론엔진] SOTA 앙상블 5-seed 로딩 완료 (단일 grasp → 5개 순전파 평균)
+#   [deploy_ros2] 추론엔진 준비 완료. 과일=..., 모델=SOTA앙상블 5-seed
+
+=========================================================================
+C.0 (권장) 배포 갭 먼저 진단 — 모델보다 이게 성능을 더 좌우할 수 있음
+rate/샘플수가 학습 스펙(100Hz, FACTOR=10)과 크게 다르면 입력이 OOD가 됨.
+
+cd ~/stiffness_deploy_ros2
+source env.sh && python3 stiffness_deploy_ros2/launch/deploy_ros2_exp.py
+# 스퀴즈마다 add_sample 수·유효 rate·downsample 스텝·도달 Fz 출력 →
+# 학습 스펙과 격차 확인 (자세한 판단·대응은 docs/TROUBLESHOOTING.md B3·F절)
+
+=========================================================================
+D. 데이터 수집 파이프라인 (collect → convert → verify).  상세: docs/DATA_COLLECTION_HANDOFF.md §6
+
+# 사전 준비 (배포 스택 + 최초 1회 설치)
+shm ; rs ; nd ; python3 ~/.Dual_Arm_Hand_Ctrl/tools/paxini_writer.py --hand r
+pip install --user h5py                                        # HDF5 기록
+sudo apt install ros-humble-moveit-msgs ros-humble-shape-msgs  # 팔 이동(msg만)
+cd ~/motie_ws/stiffness_deploy_ros2      # ★ `cd A && source env.sh` 로 쓰지 말 것 — cd 실패 시
+source env.sh                            #   && 때문에 source 가 건너뛰어져 conda python 이 잡힌다(아래 참고)
+
+# 0) 팔 준비 — MoveIt 팔 이동을 쓸 때만 필요. 터미널 2개로 나눈다. (안 쓰면 ARM_POSES=None 로 두고 1)로)
+# ─────────────────────────────────────────────────────────────────────────
+# [터미널 A] move_group — 계속 띄워둔다
+#   ★★ env.sh 를 먼저 source 할 것. /opt/ros/humble/setup.bash 만 source 하면 PATH 의 miniconda 가
+#      남아 런치의 Python 노드가 conda python(3.13)으로 실행되고, rclpy(3.10 전용) import 실패로
+#      joint_state_merger.py·trajectory_bridge.py 등이 전부 죽는다. move_group(C++)만 살아남아
+#      /joint_states_relay 가 없고 → MoveIt 이 시작자세를 못 받아 플랜/재생이 안 된다.
+
+source ~/motie_ws/stiffness_deploy_ros2/env.sh          # ★ conda 제거가 핵심
+source ~/isaac_ws/dex_soldering/dex_ros/isaac-ros/kistar_ws/install/setup.bash
+ros2 launch franka_kistar_bringup dual_fr3_kistar_moveit.launch.py joint_state_mode:=direct
+#   RViz 없이: ... joint_state_mode:=direct use_rviz:=false
+
+
+#
+# [터미널 B] 캡처·테스트 — env.sh 만 (kistar_ws source 불필요: moveit_msgs/shape_msgs 는 apt 제공)
+cd ~/motie_ws/stiffness_deploy_ros2
+source env.sh
+python3 stiffness_deploy_ros2/launch/capture_pose.py              # 자세 잡고 이름 입력 → ARM_POSES 출력
+#   capture 출력 예:  ✔ 'grip' 캡처: 0.71310 0.67670 -0.24250 -2.05340 -0.58060 2.09660 -1.36600
+#   ★ 그 7개(공백 구분)를 --joints 뒤에 그대로 복붙(음수 그대로 OK). 아래로 그 자세를 테스트:
+#   MoveIt 팔 이동 테스트 (기본 plan-only = 팔 안 움직임, 안전):
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py --print-current      # 현재 팔 관절각 출력
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py \
+    --joints -0.71804 0.01476 0.99346 -2.22701 0.52551 2.46033 0.65129        # 관절 goal 플랜(이동 X)
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py --pose 0.45 -0.10 0.35   # Cartesian goal 플랜(이동 X)
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py \
+    --joints -0.17693 0.81788 0.82204 -2.03453 -1.13246 1.78773 0.64572 --execute  # ★실제 이동(y/N 확인)
+
+# safe
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py \
+    --joints -0.1026 0.9079 0.6511 -1.7808 -1.2049 1.8748 0.4749 --execute 
+
+# grasp
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py \
+    --joints -0.1978 -1.2730 -0.4971 -2.3722 0.2990 0.9482 -0.9193 --execute     
+
+
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py \
+    --joints -0.0605 1.1827 0.4211 -1.5709 -1.3295 1.8854 0.4948 --execute  
+
+# palm-up
+python3 stiffness_deploy_ros2/launch/test_moveit_mover.py \
+    --joints -0.0002 1.0334 0.2085 -2.1937 1.6606 1.1778 0.7250 --execute  
+
+    
+
+#   플랜 성공 시 확인 포인트:
+#     관절 = ['right_fr3_joint1'...]                 ← dual v2 설정과 일치(정상)
+#     [test] 현재 vs 플랜 시작 최대차 = 0.000 rad     ← 0.15 초과면 --execute 가 재생을 거부(안전장치).
+#                                                     크면 터미널 A 가 joint_state_mode:=direct 인지 확인
+#   ※ 출력을 파일로 남기지 말 것(`| tee log.txt` 금지) — capture_pose.py/test_moveit_mover.py 는
+#     os._exit() 로 끝나 stdout flush 를 건너뛴다. 파이프면 마지막 출력(ARM_POSES 블록 등)이 유실된다.
+# ─────────────────────────────────────────────────────────────────────────
+
+# 1) 수집 — 9단계 시퀀스, run당 스퀴즈 A/B, run 끝날 때 성공판정 프롬프트
+# 터미널 A
+source ~/motie_ws/stiffness_deploy_ros2/env.sh
+source ~/isaac_ws/dex_soldering/dex_ros/isaac-ros/kistar_ws/install/setup.bash
+ros2 launch franka_kistar_bringup dual_fr3_kistar_moveit.launch.py joint_state_mode:=direct use_rviz:=false
+
+# 터미널 B
+cd ~/motie_ws/stiffness_deploy_ros2
+source env.sh          # ROS_DOMAIN_ID=9 / RMW / LOCALHOST_ONLY=0 설정
+python3 stiffness_deploy_ros2/launch/collect_ros2.py --fruit tomato --num-demos 1 --paxini raw
+
+
+python3 stiffness_deploy_ros2/launch/collect_ros2.py --fruit tomato --num-demos 20
+#   opt: --paxini raw | --no-bag | --bag-storage sqlite3 | --no-judge | --fruit 생략=대화형
+#   out: collect_logs/collect_<fruit>_<ts>/  (*.h5 + bag/ + outcomes.json)
+
+# 2) bag → HDF5 — 구간별(스퀴즈 A/B + palm-down)
+cd ~/motie_ws/stiffness_deploy_ros2 && source env.sh
+S=$(ls -dt collect_logs/collect_* | head -1); echo "$S"
+python3 stiffness_deploy_ros2/launch/bag_to_hdf5.py "$S/bag"
+ls -la "$S/from_bag.h5"
+
+
+# 3) parity 검증 (라이브 HDF5 ↔ bag HDF5)
+cd ~/motie_ws/stiffness_deploy_ros2 && source env.sh
+S=$(ls -dt collect_logs/collect_* | head -1)
+python3 stiffness_deploy_ros2/launch/verify_parity.py "$S"/collect_*.h5 "$S/from_bag.h5"
+
+# HDF5 읽기 — 그룹명 {segment}__run{NNN}, attrs: run / segment / outcome
+#   import h5py
+#   with h5py.File(p) as f:
+#     for g in f.values():
+#       if g.attrs.get("outcome") in ("grip_fail","discard"): continue   # 실패 제외
+#       g["joint"][:]                    # 스퀴즈. palm-down 은 g["arm_joint"][:]
+
+=========================================================================
+포즈 이름 (Enter=종료) : safe
+  ✔ 'safe' 캡처: -0.1026 0.9079 0.6511 -1.7808 -1.2049 1.8748 0.4749
+
+포즈 이름 (Enter=종료) : grasp
+  ✔ 'grasp' 캡처: -0.0605 1.1827 0.4211 -1.5709 -1.3295 1.8854 0.4948
+
+포즈 이름 (Enter=종료) : palm-up
+  ✔ 'palm-up' 캡처: -0.0002 1.0334 0.2085 -2.1937 1.6606 1.1778 0.7250
+
+
+
+python3 collect_ros2.py --fruit ecoflex --grip-pose pose1 --paxini raw
+python3 collect_ros2.py --fruit ecoflex --grip-pose pose2 --paxini raw
+
+ros2 launch franka_kistar_bringup dual_fr3_kistar_moveit.launch.py joint_state_mode:=direct use_rviz:=false
+
+
+=========================================================================
+ bag → h5 (bag 빼고 h5 + json 만 있는 폴더로 재구성)          2026-08-04
+=========================================================================
+
+cd ~/motie_ws/stiffness_deploy_ros2 && source env.sh
+
+# collect_logs 통째로 변환 → collect_h5/<세션폴더명>/session.h5 + outcomes.json
+python3 stiffness_deploy_ros2/launch/bag_to_session.py collect_logs --out-root ~/collect_h5
+
+#   끊겼으면 --skip-existing 붙여 다시 (있는 건 건너뜀)
+#   이미 만든 session.h5 를 옮기기만 하면 --reuse-h5 (bag 안 읽음, 몇 초)
+#   ROS 없는 PC 면 tools/bag_to_session_noros.py 로 같은 인자
+#   세션 1개만: 뒤에 세션 폴더 경로를 주면 됨 (--out-root 없으면 그 폴더 안에 생성)

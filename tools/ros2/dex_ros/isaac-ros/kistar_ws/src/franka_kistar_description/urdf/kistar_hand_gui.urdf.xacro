@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-only description for the joint_state_publisher_gui slider panel.
+     Instantiates one KISTAR hand with a configurable prefix so the joint
+     names match the dual URDF (e.g. prefix:=right_ -> right_index_joint_0).
+     Used by dual_fr3_kistar_planning_pc_v2.launch.py (real_hand mode): the
+     GUI shows ONLY these 16 hand joints; a plain joint_state_publisher
+     merges them (source_list) into the full-robot joint_states. -->
+<robot name="kistar_hand_gui" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="prefix" default=""/>
+  <xacro:include filename="$(find franka_kistar_description)/urdf/kistar_hand_macro.xacro"/>
+  <xacro:kistar_hand prefix="$(arg prefix)"/>
+</robot>

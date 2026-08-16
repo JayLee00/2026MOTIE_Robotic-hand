@@ -1,0 +1,31 @@
+# KISTAR 핸드 자세 설정
+# 각도 단위: degrees
+# 이 파일 하나만 수정하면 run_topdown_grasp.py 와 robot_executor.py 모두 반영됩니다.
+
+abduction_deg: 15.0           # 손가락 외전각 (index: -, ring: +)
+# approach_offset_m → configs/arm.yaml 로 이동
+
+motion:
+  steps: 30                   # 손가락 이동 보간 스텝 수
+  period_sec: 0.02            # 스텝 간 간격 (초)  →  총 0.6 초
+
+hand_init:                    # 대기 / 충돌 회피 자세
+  thumb_j1_deg:   90.0
+  thumb_j2_deg:  -90.0
+  finger_j3_deg:  67.5        # index / middle / ring j3 굽힘각
+
+hand_release:                 # 물체 릴리즈 (완전 펴기) 자세
+  thumb_j1_deg:   90.0
+  thumb_j2_deg:  -90.0
+  finger_j3_deg:   0.0        # 완전 펴짐
+
+hand_grasp:                   # 파지 자세 (top-down, FIXED)
+  thumb_j1_deg:   90.0
+  thumb_j2_deg:  -90.0
+  thumb_j4_deg:  60.0
+  # finger_bend_deg: 90.0       # index / middle / ring j1~j3 완전 구부림
+  finger_bend_deg: 60.0       # index / middle / ring 기본 굽힘각 (아래 미지정 관절에 적용)
+  # 관절별 개별 조절 (옵션) — 주석 해제하면 해당 관절만 이 값 사용:
+  finger_j2_deg: 30.0         # 각 손가락 2번 관절
+  # finger_j3_deg: 60.0         # 각 손가락 3번 관절
+  finger_j4_deg: 45.0         # 각 손가락 4번(끝) 관절

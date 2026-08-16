@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!-- Dual-arm FR3 + KISTAR hand URDF, v2 (dex-urdf re-xacro).
+     Composes the per-arm parameterized macros generated from
+     /home/cy/isaac_ws/dex-urdf/robots/assembly/fr3_kistar_{left,right}/.
+
+     v1 dual_fr3_kistar.urdf.xacro stays untouched (rollback path).
+     This v2 chain produces movable joint names IDENTICAL to v1
+     (<prefix>fr3_jointN, <prefix><finger>_joint_<n>) so the existing
+     joint_state_merger.py / trajectory_bridge.py / robot-PC relay regex
+     all continue to work. Collision geometry and hand topology come from
+     dex-urdf; the companion dual_fr3_kistar_v2.srdf was regenerated
+     headlessly via `ros2 run moveit_setup_assistant collisions_updater`
+     against this URDF (substitutes the plan Step 7 interactive MSA gate).
+
+     Note: tcp_xyz / TCP link is NOT emitted (v1's ee_id='none' made it
+     dead code; v2 inherits that). -->
+<robot name="dual_fr3_kistar" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find franka_kistar_description)/urdf/fr3_kistar_left.urdf.xacro"/>
+  <xacro:include filename="$(find franka_kistar_description)/urdf/fr3_kistar_right.urdf.xacro"/>
+
+  <!-- Arm-separation transforms inherited verbatim from v1
+       dual_fr3_kistar.urdf.xacro:25-32 -->
+  <xacro:arg name="left_arm_xyz"          default="0.066 0.122 0.359"/>
+  <xacro:arg name="left_arm_rpy"          default="-0.785 0 0"/>
+  <xacro:arg name="right_arm_xyz"         default="0.066 -0.122 0.359"/>
+  <xacro:arg name="right_arm_rpy"         default="0.785 0 0"/>
+  <!-- Hand mount yaw rotated 180° from previous 2.355 rad = -0.7866 rad -->
+  <xacro:arg name="left_hand_mount_rpy"   default="0 0 -0.7866"/>
+  <xacro:arg name="right_hand_mount_rpy"  default="0 0 -0.7866"/>
+
+  <link name="base"/>
+
+  <xacro:fr3_kistar_left
+      prefix="left_"
+      connected_to="base"
+      xyz="$(arg left_arm_xyz)"
+      rpy="$(arg left_arm_rpy)"
+      hand_mount_rpy="$(arg left_hand_mount_rpy)"/>
+
+  <xacro:fr3_kistar_right
+      prefix="right_"
+      connected_to="base"
+      xyz="$(arg right_arm_xyz)"
+      rpy="$(arg right_arm_rpy)"
+      hand_mount_rpy="$(arg right_hand_mount_rpy)"/>
+
+</robot>

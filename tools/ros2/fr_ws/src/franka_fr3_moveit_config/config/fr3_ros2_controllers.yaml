@@ -1,0 +1,66 @@
+# fr3_ros2_controllers.yaml 
+#TODO
+
+controller_manager:
+  ros__parameters:
+    update_rate: 1000  # Franka는 보통 1kHz 루프 권장
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    fr3_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    # 있으면 Franka 상태(추가 토픽들)도 브로드캐스트 가능. RViz 필수는 아님.
+    franka_robot_state_broadcaster:
+      type: franka_robot_state_broadcaster/FrankaRobotStateBroadcaster
+
+joint_state_broadcaster:
+  ros__parameters:
+    publish_rate: 100.0
+
+fr3_arm_controller:
+  ros__parameters:
+    joints:
+      - fr3_joint1
+      - fr3_joint2
+      - fr3_joint3
+      - fr3_joint4
+      - fr3_joint5
+      - fr3_joint6
+      - fr3_joint7
+
+    # Franka ROS2 공식 쪽도 JTC를 effort로 쓰는 구성이 흔함 (PID로 effort 생성)
+    command_interfaces:
+      - effort
+    state_interfaces:
+      - position
+      - velocity
+
+    # JTC는 시간 기반 보간으로 setpoint를 만들고 실행함
+    interpolation_method: splines
+
+    state_publish_rate: 100.0
+    action_monitor_rate: 20.0
+    open_loop_control: false
+    allow_partial_joints_goal: false
+
+    constraints:
+      stopped_velocity_tolerance: 0.02
+      goal_time: 0.5
+      fr3_joint1: {trajectory: 0.20, goal: 0.05}
+      fr3_joint2: {trajectory: 0.20, goal: 0.05}
+      fr3_joint3: {trajectory: 0.20, goal: 0.05}
+      fr3_joint4: {trajectory: 0.20, goal: 0.05}
+      fr3_joint5: {trajectory: 0.20, goal: 0.05}
+      fr3_joint6: {trajectory: 0.20, goal: 0.05}
+      fr3_joint7: {trajectory: 0.20, goal: 0.05}
+
+    # gains 구조/의미는 ros2_control 문서 그대로
+    gains:
+      fr3_joint1: {p: 60.0, i: 0.0, d: 6.0}
+      fr3_joint2: {p: 60.0, i: 0.0, d: 6.0}
+      fr3_joint3: {p: 60.0, i: 0.0, d: 6.0}
+      fr3_joint4: {p: 50.0, i: 0.0, d: 5.0}
+      fr3_joint5: {p: 40.0, i: 0.0, d: 4.0}
+      fr3_joint6: {p: 30.0, i: 0.0, d: 3.0}
+      fr3_joint7: {p: 20.0, i: 0.0, d: 2.0}

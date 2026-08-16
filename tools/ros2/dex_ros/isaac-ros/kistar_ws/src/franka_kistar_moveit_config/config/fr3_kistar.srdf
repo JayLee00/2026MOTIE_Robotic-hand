@@ -1,0 +1,557 @@
+<?xml version="1.0"?>
+<robot name="fr3">
+  <!-- Virtual joint connecting robot to world -->
+  <virtual_joint name="virtual_joint" type="fixed" parent_frame="world" child_link="fr3_link0"/>
+
+  <!-- Planning group: FR3 arm (7-DOF) -->
+  <group name="fr3_arm">
+    <chain base_link="fr3_link0" tip_link="fr3_link8"/>
+  </group>
+
+  <!-- Group states for fr3_arm -->
+  <group_state name="ready" group="fr3_arm">
+    <joint name="fr3_joint1" value="0"/>
+    <joint name="fr3_joint2" value="-0.785"/>
+    <joint name="fr3_joint3" value="0"/>
+    <joint name="fr3_joint4" value="-2.356"/>
+    <joint name="fr3_joint5" value="0"/>
+    <joint name="fr3_joint6" value="1.571"/>
+    <joint name="fr3_joint7" value="0.785"/>
+  </group_state>
+
+  <group_state name="extended" group="fr3_arm">
+    <joint name="fr3_joint1" value="0"/>
+    <joint name="fr3_joint2" value="0"/>
+    <joint name="fr3_joint3" value="0"/>
+    <joint name="fr3_joint4" value="-0.1"/>
+    <joint name="fr3_joint5" value="0"/>
+    <joint name="fr3_joint6" value="1.571"/>
+    <joint name="fr3_joint7" value="0.785"/>
+  </group_state>
+
+  <!-- Disable collisions between adjacent links -->
+  <disable_collisions link1="fr3_link0" link2="fr3_link1" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link0" link2="fr3_link2" reason="Never"/>
+  <disable_collisions link1="fr3_link0" link2="fr3_link3" reason="Never"/>
+  <disable_collisions link1="fr3_link0" link2="fr3_link4" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="fr3_link2" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link1" link2="fr3_link3" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="fr3_link4" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="fr3_link3" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link2" link2="fr3_link4" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="fr3_link6" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="fr3_link4" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link3" link2="fr3_link5" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="fr3_link6" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="fr3_link7" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="fr3_link5" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link4" link2="fr3_link6" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="fr3_link7" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="fr3_link8" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="fr3_link6" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link5" link2="fr3_link7" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="fr3_link7" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link6" link2="fr3_link8" reason="Default"/>
+  <disable_collisions link1="fr3_link7" link2="fr3_link8" reason="Adjacent"/>
+
+  <!-- ============================================================ -->
+  <!-- Disable collisions between arm and kistar_hand root/mount/palm -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="fr3_link8" link2="kistar_hand" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="mount" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link8" link2="palm" reason="Adjacent"/>
+  <disable_collisions link1="fr3_link7" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="palm" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="palm" reason="Never"/>
+
+  <!-- kistar_hand root <-> mount <-> palm chain (all fixed joints) -->
+  <disable_collisions link1="kistar_hand" link2="mount" reason="Adjacent"/>
+  <disable_collisions link1="kistar_hand" link2="palm" reason="Adjacent"/>
+  <disable_collisions link1="mount" link2="palm" reason="Adjacent"/>
+
+  <!-- ============================================================ -->
+  <!-- Arm links (0~5) can never reach the hand — disable all       -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="fr3_link0" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link0" link2="palm" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="palm" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="palm" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="palm" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="palm" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="mount" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="palm" reason="Never"/>
+
+  <!-- ============================================================ -->
+  <!-- Palm <-> all basemotors (fixed joints from palm)             -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="palm" link2="index_basemotor" reason="Adjacent"/>
+  <disable_collisions link1="palm" link2="middle_basemotor" reason="Adjacent"/>
+  <disable_collisions link1="palm" link2="ring_basemotor" reason="Adjacent"/>
+  <disable_collisions link1="palm" link2="thumb_basemotor" reason="Adjacent"/>
+
+  <!-- ============================================================ -->
+  <!-- INDEX finger: disable same-finger adjacent/chain pairs       -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="index_basemotor" link2="index_link_0" reason="Adjacent"/>
+  <disable_collisions link1="index_link_0" link2="index_link_1" reason="Adjacent"/>
+  <disable_collisions link1="index_link_1" link2="index_link_2" reason="Adjacent"/>
+  <disable_collisions link1="index_link_2" link2="index_tip" reason="Adjacent"/>
+  <!-- non-adjacent within same finger (small links, can't self-collide) -->
+  <disable_collisions link1="index_basemotor" link2="index_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="index_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="index_tip" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="index_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="index_tip" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="index_tip" reason="Never"/>
+  <!-- index sensors (no collision geometry) -->
+  <disable_collisions link1="index_link_1" link2="kistar_hand_index_sensor_0" reason="Adjacent"/>
+  <disable_collisions link1="index_link_1" link2="kistar_hand_index_sensor_1" reason="Adjacent"/>
+  <disable_collisions link1="index_link_2" link2="kistar_hand_index_sensor_2" reason="Adjacent"/>
+
+  <!-- ============================================================ -->
+  <!-- MIDDLE finger: disable same-finger adjacent/chain pairs      -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="middle_basemotor" link2="middle_link_0" reason="Adjacent"/>
+  <disable_collisions link1="middle_link_0" link2="middle_link_1" reason="Adjacent"/>
+  <disable_collisions link1="middle_link_1" link2="middle_link_2" reason="Adjacent"/>
+  <disable_collisions link1="middle_link_2" link2="middle_tip" reason="Adjacent"/>
+  <disable_collisions link1="middle_basemotor" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="middle_tip" reason="Never"/>
+  <!-- middle sensors -->
+  <disable_collisions link1="middle_link_1" link2="kistar_hand_middle_sensor_0" reason="Adjacent"/>
+  <disable_collisions link1="middle_link_1" link2="kistar_hand_middle_sensor_1" reason="Adjacent"/>
+  <disable_collisions link1="middle_link_2" link2="kistar_hand_middle_sensor_2" reason="Adjacent"/>
+
+  <!-- ============================================================ -->
+  <!-- RING finger: disable same-finger adjacent/chain pairs        -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="ring_basemotor" link2="ring_link_0" reason="Adjacent"/>
+  <disable_collisions link1="ring_link_0" link2="ring_link_1" reason="Adjacent"/>
+  <disable_collisions link1="ring_link_1" link2="ring_link_2" reason="Adjacent"/>
+  <disable_collisions link1="ring_link_2" link2="ring_tip" reason="Adjacent"/>
+  <disable_collisions link1="ring_basemotor" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="ring_link_0" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="ring_link_1" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="ring_basemotor" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="ring_link_0" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="ring_basemotor" link2="ring_tip" reason="Never"/>
+  <!-- ring sensors -->
+  <disable_collisions link1="ring_link_1" link2="kistar_hand_ring_sensor_0" reason="Adjacent"/>
+  <disable_collisions link1="ring_link_1" link2="kistar_hand_ring_sensor_1" reason="Adjacent"/>
+  <disable_collisions link1="ring_link_2" link2="kistar_hand_ring_sensor_2" reason="Adjacent"/>
+
+  <!-- ============================================================ -->
+  <!-- THUMB finger: disable same-finger adjacent/chain pairs       -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="thumb_basemotor" link2="thumb_link_0" reason="Adjacent"/>
+  <disable_collisions link1="thumb_link_0" link2="thumb_link_1" reason="Adjacent"/>
+  <disable_collisions link1="thumb_link_1" link2="thumb_link_2" reason="Adjacent"/>
+  <disable_collisions link1="thumb_link_2" link2="thumb_tip" reason="Adjacent"/>
+  <disable_collisions link1="thumb_basemotor" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="thumb_link_0" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="thumb_link_1" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="thumb_basemotor" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="thumb_link_0" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="thumb_basemotor" link2="thumb_tip" reason="Never"/>
+  <!-- thumb sensors -->
+  <disable_collisions link1="thumb_link_2" link2="kistar_hand_thumb_sensor_0" reason="Adjacent"/>
+  <disable_collisions link1="thumb_link_2" link2="kistar_hand_thumb_sensor_1" reason="Adjacent"/>
+
+  <!-- ============================================================ -->
+  <!-- Basemotors vs each other (fixed to palm, never collide)      -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="index_basemotor" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="ring_basemotor" link2="thumb_basemotor" reason="Never"/>
+
+  <!-- ============================================================ -->
+  <!-- Arm links vs all finger links (too far to collide)           -->
+  <!-- ============================================================ -->
+  <!-- fr3_link0~5 vs all hand links -->
+  <disable_collisions link1="fr3_link0" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link0" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link0" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link0" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link1" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link2" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link3" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link4" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="thumb_basemotor" reason="Never"/>
+
+  <!-- fr3_link6~8 vs finger links (attached chain, can't collide) -->
+  <disable_collisions link1="fr3_link6" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="thumb_basemotor" reason="Never"/>
+
+  <!-- fr3_link8 vs palm-adjacent finger links -->
+  <disable_collisions link1="fr3_link8" link2="index_link_0" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="thumb_link_0" reason="Never"/>
+
+  <!-- ============================================================ -->
+  <!-- Sensor links vs everything (no collision geometry)           -->
+  <!-- Cross-finger sensor pairs and sensor-arm pairs               -->
+  <!-- ============================================================ -->
+  <!-- All sensors vs arm links (sensors have no collision) -->
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_index_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_index_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_index_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_middle_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link5" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_index_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_index_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_index_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_middle_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link6" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_index_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_index_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_index_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_middle_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link7" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_index_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_index_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_index_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_middle_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="fr3_link8" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+
+  <!-- Sensors vs palm/mount (no collision geometry on sensors) -->
+  <disable_collisions link1="palm" link2="kistar_hand_index_sensor_0" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_index_sensor_1" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_index_sensor_2" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_middle_sensor_2" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="palm" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_index_sensor_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_index_sensor_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_index_sensor_2" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_middle_sensor_2" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+
+  <!-- ============================================================ -->
+  <!-- Palm vs finger links (palm box is large, disable link_0s)    -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="palm" link2="index_link_0" reason="Never"/>
+  <disable_collisions link1="palm" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="palm" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="palm" link2="thumb_link_0" reason="Never"/>
+
+  <!-- ============================================================ -->
+  <!-- Cross-finger collision disable                              -->
+  <!-- Hand joints are NOT in planning group, so finger positions   -->
+  <!-- are fixed during arm planning. Cross-finger box overlaps     -->
+  <!-- cause permanent "in collision" state → must disable.         -->
+  <!-- ============================================================ -->
+
+  <!-- INDEX vs MIDDLE -->
+  <disable_collisions link1="index_basemotor" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="middle_tip" reason="Never"/>
+
+  <!-- INDEX vs RING -->
+  <disable_collisions link1="index_basemotor" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="ring_tip" reason="Never"/>
+
+  <!-- INDEX vs THUMB -->
+  <disable_collisions link1="index_basemotor" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="index_basemotor" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_0" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_1" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="index_link_2" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="index_tip" link2="thumb_tip" reason="Never"/>
+
+  <!-- MIDDLE vs RING -->
+  <disable_collisions link1="middle_basemotor" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="ring_tip" reason="Never"/>
+
+  <!-- MIDDLE vs THUMB -->
+  <disable_collisions link1="middle_basemotor" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="middle_basemotor" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_0" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_1" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="middle_link_2" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="middle_tip" link2="thumb_tip" reason="Never"/>
+
+  <!-- RING vs THUMB -->
+  <disable_collisions link1="ring_basemotor" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="ring_basemotor" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="ring_basemotor" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="ring_basemotor" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="ring_link_0" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="ring_link_0" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="ring_link_0" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="ring_link_0" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="ring_link_0" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="ring_link_1" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="ring_link_1" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="ring_link_1" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="ring_link_1" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="ring_link_1" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="ring_link_2" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="ring_link_2" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="ring_link_2" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="ring_link_2" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="ring_link_2" link2="thumb_tip" reason="Never"/>
+  <disable_collisions link1="ring_tip" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="ring_tip" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="ring_tip" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="ring_tip" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="ring_tip" link2="thumb_tip" reason="Never"/>
+
+  <!-- ============================================================ -->
+  <!-- Palm vs finger link_1/link_2/tip (palm box may overlap)      -->
+  <!-- ============================================================ -->
+  <disable_collisions link1="palm" link2="index_link_1" reason="Never"/>
+  <disable_collisions link1="palm" link2="index_link_2" reason="Never"/>
+  <disable_collisions link1="palm" link2="index_tip" reason="Never"/>
+  <disable_collisions link1="palm" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="palm" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="palm" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="palm" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="palm" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="palm" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="palm" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="palm" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="palm" link2="thumb_tip" reason="Never"/>
+
+  <!-- Mount vs all finger links -->
+  <disable_collisions link1="mount" link2="index_basemotor" reason="Never"/>
+  <disable_collisions link1="mount" link2="index_link_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="index_link_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="index_link_2" reason="Never"/>
+  <disable_collisions link1="mount" link2="index_tip" reason="Never"/>
+  <disable_collisions link1="mount" link2="middle_basemotor" reason="Never"/>
+  <disable_collisions link1="mount" link2="middle_link_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="middle_link_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="middle_link_2" reason="Never"/>
+  <disable_collisions link1="mount" link2="middle_tip" reason="Never"/>
+  <disable_collisions link1="mount" link2="ring_basemotor" reason="Never"/>
+  <disable_collisions link1="mount" link2="ring_link_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="ring_link_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="ring_link_2" reason="Never"/>
+  <disable_collisions link1="mount" link2="ring_tip" reason="Never"/>
+  <disable_collisions link1="mount" link2="thumb_basemotor" reason="Never"/>
+  <disable_collisions link1="mount" link2="thumb_link_0" reason="Never"/>
+  <disable_collisions link1="mount" link2="thumb_link_1" reason="Never"/>
+  <disable_collisions link1="mount" link2="thumb_link_2" reason="Never"/>
+  <disable_collisions link1="mount" link2="thumb_tip" reason="Never"/>
+
+  <!-- Cross-finger sensor pairs (no collision geometry on sensors) -->
+  <disable_collisions link1="kistar_hand_index_sensor_0" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_0" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_0" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_0" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_0" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_0" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_1" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_1" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_1" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_1" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_1" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_1" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_middle_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_middle_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_middle_sensor_2" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_index_sensor_2" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_0" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_0" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_0" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_0" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_1" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_1" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_1" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_1" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_2" link2="kistar_hand_ring_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_2" link2="kistar_hand_ring_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_2" link2="kistar_hand_ring_sensor_2" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_2" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_middle_sensor_2" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_ring_sensor_0" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_ring_sensor_0" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_ring_sensor_1" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_ring_sensor_1" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+  <disable_collisions link1="kistar_hand_ring_sensor_2" link2="kistar_hand_thumb_sensor_0" reason="Never"/>
+  <disable_collisions link1="kistar_hand_ring_sensor_2" link2="kistar_hand_thumb_sensor_1" reason="Never"/>
+
+</robot>
+
+
+

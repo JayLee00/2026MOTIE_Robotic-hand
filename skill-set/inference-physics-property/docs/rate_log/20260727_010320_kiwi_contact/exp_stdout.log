@@ -1,0 +1,97 @@
+[INFO] [1785081805.725172575] [deploy_ros2_bridge]: safe servo-on: 현재 손 자세를 q_target 으로 먼저 발행 후 servo on (mode=1)
+추론할 과일  [1]자두 [2]키위 [3]토마토 [4]레몬 : [통합모델] 선택=m3_dX, 변위=False, 과일=tomato, 포즈=tomato.txt
+[pose] 과일 포즈 적용: tomato.txt -> GRIP=[4107, -4097, 422, 1804, -777, 2928, 1909, 438, -477, 2944, 837, 769, 1372, 3596, 1726, 23]
+[threshold] tomato: 파지=7.0N, 스퀴즈=10.0N
+/home/cy/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:180: UserWarning: CUDA initialization: Unexpected error from cudaGetDeviceCount(). Did you run some cuda functions before calling NumCudaDevices() that might have already set an error? Error 804: forward compatibility was attempted on non supported HW (Triggered internally at /pytorch/c10/cuda/CUDAFunctions.cpp:119.)
+  return torch._C._cuda_getDeviceCount() > 0
+  마스킹=True (출처: 체크포인트 자동), 임계=2.5N
+  [자동] 공통정규화 min/max=[0.679,6.757] (체크포인트 기준)
+[추론엔진] fruit=tomato, 마스킹=ON, 정규화[0.6789,6.7574], 경계=[1.905, 3.075]
+[measure] 준비 완료. 과일=tomato, 모델=260707_2244_lstm_m3_dX_lr0.001_do0.3_h192_L2_s42.pth
+
+--- 데모 0 (계측) ---
+=================== 안전 위치 (손만) ===================
+=================== 파지 위치 (손만) ===================
+[move_hand_to_target_until_force] finger [0, 1, 2, 3] threshold(7.0N) 미도달 — target 위치 유지.
+=================== 스퀴즈 모션 ===================
+  [squeeze] 스퀴즈 전 1.0s 대기
+[move_hand_to_target_until_force] finger [0] threshold(10.0N) 미도달 — target 위치 유지.
+  [squeeze] threshold(10.0) 도달 → 1.0s holding
+  [squeeze] thumb 만 파지 position 으로 복귀 (나머지 finger 는 파지 유지)
+
+----------------------------------------------------
+[measure] 스퀴즈 계측 (학습 대비 격차 확인용)
+  add_sample 호출 = 150,  valid(적재) = 150
+  유효 rate       =   97.8 Hz   (수집시간 1.52s)
+  downsample 스텝 = 15   (FACTOR=10, MIN_LEN=10)
+  finger별 최대 Fz = [4.5, 1.2000000476837158, 2.0, 1.5]
+    thumb 최대 = 4.50 N   (스퀴즈 임계 10.0 N)
+----------------------------------------------------
+
+
+================================================
+  [추론 결과] tomato
+    절대강성 = 1.495
+    등급     = soft  (class 0)
+================================================
+
+
+다음 동작  [1] 다시 스퀴즈+추론  [2] 안전위치 복귀 후 다시 스퀴즈  [3] 안전위치 복귀 후 종료 : 
+--- 데모 1 (계측) ---
+=================== 안전 위치 (손만) ===================
+=================== 파지 위치 (손만) ===================
+[move_hand_to_target_until_force] finger [0, 1, 2, 3] threshold(7.0N) 미도달 — target 위치 유지.
+=================== 스퀴즈 모션 ===================
+  [squeeze] 스퀴즈 전 1.0s 대기
+[move_hand_to_target_until_force] finger [0] threshold(10.0N) 미도달 — target 위치 유지.
+  [squeeze] threshold(10.0) 도달 → 1.0s holding
+  [squeeze] thumb 만 파지 position 으로 복귀 (나머지 finger 는 파지 유지)
+
+----------------------------------------------------
+[measure] 스퀴즈 계측 (학습 대비 격차 확인용)
+  add_sample 호출 = 150,  valid(적재) = 150
+  유효 rate       =   97.8 Hz   (수집시간 1.52s)
+  downsample 스텝 = 15   (FACTOR=10, MIN_LEN=10)
+  finger별 최대 Fz = [5.199999809265137, 1.600000023841858, 1.7000000476837158, 1.2999999523162842]
+    thumb 최대 = 5.20 N   (스퀴즈 임계 10.0 N)
+----------------------------------------------------
+
+
+================================================
+  [추론 결과] tomato
+    절대강성 = 1.453
+    등급     = soft  (class 0)
+================================================
+
+
+다음 동작  [1] 다시 스퀴즈+추론  [2] 안전위치 복귀 후 다시 스퀴즈  [3] 안전위치 복귀 후 종료 : 
+--- 데모 2 (계측) ---
+=================== 안전 위치 (손만) ===================
+=================== 파지 위치 (손만) ===================
+[move_hand_to_target_until_force] finger [0, 1, 2, 3] threshold(7.0N) 미도달 — target 위치 유지.
+=================== 스퀴즈 모션 ===================
+  [squeeze] 스퀴즈 전 1.0s 대기
+[move_hand_to_target_until_force] finger [0] threshold(10.0N) 미도달 — target 위치 유지.
+  [squeeze] threshold(10.0) 도달 → 1.0s holding
+  [squeeze] thumb 만 파지 position 으로 복귀 (나머지 finger 는 파지 유지)
+
+----------------------------------------------------
+[measure] 스퀴즈 계측 (학습 대비 격차 확인용)
+  add_sample 호출 = 150,  valid(적재) = 150
+  유효 rate       =   97.9 Hz   (수집시간 1.52s)
+  downsample 스텝 = 15   (FACTOR=10, MIN_LEN=10)
+  finger별 최대 Fz = [4.699999809265137, 2.5, 1.2999999523162842, 1.600000023841858]
+    thumb 최대 = 4.70 N   (스퀴즈 임계 10.0 N)
+----------------------------------------------------
+
+
+================================================
+  [추론 결과] tomato
+    절대강성 = 1.417
+    등급     = soft  (class 0)
+================================================
+
+
+다음 동작  [1] 다시 스퀴즈+추론  [2] 안전위치 복귀 후 다시 스퀴즈  [3] 안전위치 복귀 후 종료 : =================== 안전 위치 복귀 후 종료 ===================
+
+계측 완료.

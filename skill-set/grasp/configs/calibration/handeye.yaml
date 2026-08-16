@@ -1,0 +1,10 @@
+frame_names:
+  base: base_link
+  camera: camera_color_optical_frame
+
+T_base_cam:
+  - [1.0, 0.0, 0.0, 0.0]
+  - [0.0, 1.0, 0.0, 0.0]
+  - [0.0, 0.0, 1.0, 0.0]
+  - [0.0, 0.0, 0.0, 1.0]
+

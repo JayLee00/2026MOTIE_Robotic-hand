@@ -1,0 +1,68 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+.env
+.venv/
+venv/
+
+# Editor / local workspace files
+.idea/
+.vscode/
+*.swp
+*.swo
+.omc
+.history
+
+# ── data: 실행 시 생성되는 출력물 (gitkeep 제외) ──────────────────────────────
+data/raw/*
+data/interim/*
+data/outputs/*
+data/debug/*
+
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/outputs/.gitkeep
+!data/debug/.gitkeep
+
+# 실험 결과 / 중간 산출물 (대용량)
+data/dro_allegro_outputs/
+data/dro_allegro_outputs_bf/
+data/dro_outputs/
+data/qwen_bbox/
+data/sam3/
+data/sam3_0514.zip
+data/sam3_adapointr_eval_*/
+data/sam3_fruit_vis/
+data/till_20260420/
+
+# 센서 녹화 / 동영상 (대용량 바이너리)
+data/fruit_vid/
+data/realsense_recordings/
+
+# numpy 바이너리 출력
+*.npz
+
+# ── third-party ────────────────────────────────────────────────────────────────
+third_party/**/__pycache__/
+third_party/**/*.pyc
+third_party/**/*.pyo
+
+# 대용량 모델 체크포인트
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.bin
+*.safetensors
+
+# ── 로컬 유틸 / 임시 파일 ────────────────────────────────────────────────────
+.TimeRecord
+*.log
+ROS2_TOPIC_GUIDE.md
+Dual_Arm_Hand_Ctrl
+originial_Franka_KISTAR_R
