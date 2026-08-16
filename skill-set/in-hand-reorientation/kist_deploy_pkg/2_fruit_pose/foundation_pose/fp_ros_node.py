@@ -408,12 +408,23 @@ class FoundationPoseNode(Node):
         a = np.zeros(3)
         a[ax] = 1.0
         K = np.array([[0, -a[2], a[1]], [a[2], 0, -a[0]], [-a[1], a[0], 0]])
-        self._sym = []
+        base = []
         for th in np.linspace(0, 2 * np.pi, self.a.sym_steps, endpoint=False):
             # 로드리게스: 축 a 둘레 th 회전
-            self._sym.append(np.eye(3) + np.sin(th) * K + (1 - np.cos(th)) * (K @ K))
+            base.append(np.eye(3) + np.sin(th) * K + (1 - np.cos(th)) * (K @ K))
+        # ★ 2026-08-17 추가 — 장축 "끝단 뒤집기" 동등물 (횡축 180° 회전 × 둘레 회전).
+        # 레몬/복숭아처럼 양 끝 형상이 비슷한 과일은 재등록이 끝이 뒤집힌 자세를
+        # 내놓을 수 있는데, 기존 집합(둘레 회전만)은 그 180° 플립을 스냅하지 못해
+        # bbox 축이 휙 뒤집혔다. 뒤집기 포함 = 물체가 실제로 돌 때만 축이 바뀐다
+        # (스냅은 재등록 직후에만 걸리므로 트래킹 중 실제 회전은 그대로 통과).
+        b = np.zeros(3)
+        b[(ax + 1) % 3] = 1.0                          # 장축에 수직인 횡축
+        Kb = np.array([[0, -b[2], b[1]], [b[2], 0, -b[0]], [-b[1], b[0], 0]])
+        F = np.eye(3) + 2.0 * (Kb @ Kb)                # 로드리게스 θ=π
+        self._sym = base + [F @ S for S in base]
         self.get_logger().info(
-            f"대칭 집합: 메시 축 {ax}(길이 {ext[ax]:.3f}m) 둘레 {self.a.sym_steps}단계")
+            f"대칭 집합: 메시 축 {ax}(길이 {ext[ax]:.3f}m) 둘레 {self.a.sym_steps}단계 "
+            f"+ 끝단 뒤집기 포함 (후보 {len(self._sym)}개)")
         return self._sym
 
     def _snap_to_prev(self, T: np.ndarray) -> np.ndarray:
