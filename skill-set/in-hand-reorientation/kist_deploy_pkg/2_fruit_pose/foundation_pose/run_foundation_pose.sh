@@ -147,13 +147,18 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo ""
-echo "── 2) republish (compressed → raw) ──"
-# 이미 떠 있는 게 있으면 먼저 치운다 — 중복되면 프레임이 겹쳐 동기화가 깨진다
-pkill -f "image_transport/republish.*$COLOR_FAST" 2>/dev/null; sleep 1
-setsid ros2 run image_transport republish compressed raw \
-  --ros-args -r "in/compressed:=$COLOR_C" -r "out:=$COLOR_FAST" >/tmp/fp_republish.log 2>&1 &
-PIDS+=($!); sleep 3
-R=$(hz "$COLOR_FAST"); echo "  $COLOR_FAST : ${R:-✗ (로그 /tmp/fp_republish.log)}"
+echo "── 2) 컬러 소스: raw 직접 구독 (republish 생략) ──"
+# 2026-08-16 이관 수정: 이 PC 에서는 Control PC 가 raw image_raw 를 이미 30Hz 발행한다
+# (러너 preflight 가 매번 확인, grasp/place 도 동일 토픽 사용). 게다가 이 PC 에는
+# ros-humble-compressed-image-transport 플러그인이 없어 republish 가 즉사한다
+# (TransportLoadException — 실측). 구 PC(raw 미발행)용이던 republish 우회를 제거.
+COLOR_RAW="$NS/color/image_raw"
+R=$(hz "$COLOR_RAW"); echo "  $COLOR_RAW : ${R:-✗ 없음 (Control PC realsense 확인)}"
+# ── 구 republish 경로 (봉인 보존 — compressed 플러그인 설치 시에만 유효) ──
+# pkill -f "image_transport/republish.*$COLOR_FAST" 2>/dev/null; sleep 1
+# setsid ros2 run image_transport republish compressed raw \
+#   --ros-args -r "in/compressed:=$COLOR_C" -r "out:=$COLOR_FAST" >/tmp/fp_republish.log 2>&1 &
+# PIDS+=($!); sleep 3
 
 echo "── 3) FoundationPose 서버 (conda env foundationpose, GPU$FP_GPU) ──"
 pkill -f "foundation_pose/fp_server.py" 2>/dev/null; sleep 1
@@ -181,7 +186,7 @@ echo "── 4) ROS2 브리지 (호스트, SAM2 초기 마스크) ──"
 /usr/bin/python3 "$HERE/fp_ros_node.py" \
   --server "127.0.0.1:$PORT" --ns "$PUB_NS" --seg-hz "${SEGHZ:-5}" \
   --reseg-every "${RESEG:-15}" ${NOCLICK:-} \
-  --color-topic "$COLOR_FAST" --depth-topic "$DEPTH" --info-topic "$INFO" \
+  --color-topic "$COLOR_RAW" --depth-topic "$DEPTH" --info-topic "$INFO" \
   >/tmp/fp_node.log 2>&1 &
 PIDS+=($!)
 echo "  기동 중... (SAM2 로드 ~10초, 로그 /tmp/fp_node.log)"

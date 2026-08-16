@@ -112,6 +112,35 @@ realsense 화면 위에 과일 CAD 정합 기반 **3D bbox + 오리엔테이션*
 - preflight 확장: `/paxini/right/raw` + VTDP 입력 3종 점검 (skip/legacy 시 자동 생략)
 - git 저장소: 이 트리를 `git init` 하고 인수 스냅샷부터 단계별 커밋. 중첩 skill 저장소 5개는 `.git.disabled` 로 보존(외부 저장소가 코드 추적). 대용량 가중치(>40MB)·로그·colcon 산출물은 gitignore — zip/로컬 관리
 
+### 4-5. seq 4 수동 place 체인 신규 개발 — 티칭 포인트 기반 (2026-08-16 저녁)
+
+**기존 seq 4(vision_pipeline place 서버)는 무수정 보존**, 별도 실행 파일 추가: `skill-set/place/scripts/seq4_manual_place.py`. 모든 좌표는 파일 **최상단 변수**(티칭 → 붙여넣기), stiffness(seq 3) 종료 자세에서 그대로 이어받아 시작(기본값 = 제시 자세 관절각).
+
+slot 당 시퀀스 (체인 1회전마다 slot 1→5 자동 진행, 상태파일 `.seq4_manual_slot`, `--slot N` 강제 가능):
+
+1. 진입 시 arm/hand state 저장 → hand **mode 1 유지**한 채 지정 11개 관절(2,3,5,6,7,9,10,11,13,14,15번)에 **+100 counts** 더 꽉 쥠 (`--grip-delta`)
+2. 공통 경유 `FRANKA_PLACE_1→2→3` → `FRANKA_PLACE_SAFE` (공통 4좌표)
+3. `FRANKA_PLACE_TOP[slot]` → `FRANKA_PLACE_DOWN[slot]` (5쌍)
+4. 릴리즈: 모드 전환 프로토콜(servo-OFF 창 + 50ms 틱 + 시드 ×2) 그대로 **mode 2(current)** 전환 → 정착 2s → 벌리는 타겟 `[4096,-4096,0,0, 0,1000,1000,1000, 0,1000,1000,1000, 0,1000,1000,1000]` 로 **3s 선형 램프** (천천히 놓기)
+5. top 복귀 → mode 1 재진입(벌린 자세 시드, 재파지 아님) → safe 복귀 → done
+
+임피던스 안전: 모든 팔 이동 min-jerk 보간 `/franka/right/q_target` **100Hz 스트리밍**(속도 배율 0.1), 첫 이동 전 측정자세 재앵커(sync_target 패턴), q_target 은 BEST_EFFORT.
+
+```bash
+# 포인트 티칭 (출력 줄을 파일 상단에 붙여넣기)
+/usr/bin/python3 skill-set/place/scripts/seq4_manual_place.py --capture wp1
+# 설정/토픽 검증 (로봇 안 움직임)
+/usr/bin/python3 skill-set/place/scripts/seq4_manual_place.py --check
+# ★ 4번만 1회 테스트 — stiffness 종료 자세로 이동 후 slot 1 place
+/usr/bin/python3 skill-set/place/scripts/seq4_manual_place.py --goto-start --slot 1
+# 체인 모드 (arbiter 규약: seq3 DONE 대기 → 제어권 4 → 반납=DONE)
+/usr/bin/python3 skill-set/place/scripts/seq4_manual_place.py --chain
+```
+
+검증: 문법 통과 + `--check` 라이브 버스에서 arm/hand 상태 실시간 수신 확인(토픽 배선 정상). 좌표 14개(공통 4 + top/down 5쌍)는 티칭으로 채워야 실행(빠진 항목은 스크립트가 짚어줌). 실기 구동 미실시.
+
+⚠ `--chain` 은 기존 place 서버(`skill_server`)와 **동시 실행 금지**(둘 다 client_id 4). 테스트는 기본(standalone) 모드로. mode 2(current) 릴리즈는 첫 사용 경로 — 첫 실행은 E-stop 옆에서.
+
 ## 5. 정책 종료판정 검토 (요청 항목)
 
 원래 의도: "화면에서 토마토 꼭지·레몬 라벨 등 특징이 보이고 중앙 정렬되면 중지, 살짝 폈다 다시 잡기로 마무리". 세 가지 방안을 검토했다.
