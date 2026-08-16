@@ -96,7 +96,12 @@ class SequenceClient:
                 raise TimeoutError(f"sq{prev_seq_id} DONE 대기 {timeout}s 초과")
 
     # ── Start / End / abort ──
-    def start(self, timeout=5.0):
+    # 2026-08-16: 기본 대기 5→30s. 파이프라인이 트윈/서비스/정책을 한꺼번에 띄우는
+    # 직후에는 DDS 참가자 급증으로 새 노드의 서비스 발견이 5s 를 넘길 수 있다
+    # (실측: 첫 실기동에서 grasp 가 "/sequence/request_control 서비스 없음" 으로 abort.
+    #  arbiter 는 살아 있었고 조용한 버스에서는 3s 에 발견됨). 발견되면 즉시 진행하므로
+    # 정상 경로에 추가 지연은 없다 — arbiter 가 정말 없을 때 실패가 늦어질 뿐이다.
+    def start(self, timeout=30.0):
         """Start(S): request_control 승인 + 하트비트 발행 시작."""
         res = self._call(
             self._cli_request,
@@ -108,7 +113,7 @@ class SequenceClient:
         self._hb_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
         self._hb_thread.start()
 
-    def end(self, timeout=5.0):
+    def end(self, timeout=30.0):
         """End(E): release_control → DONE (다음 시퀀스가 이어받음) + 하트비트 정지."""
         try:
             res = self._call(
