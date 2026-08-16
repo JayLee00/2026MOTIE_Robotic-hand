@@ -1,0 +1,1 @@
+ ./run_fruit_demo.sh --fruit lemon,tomato,peach --loops 3

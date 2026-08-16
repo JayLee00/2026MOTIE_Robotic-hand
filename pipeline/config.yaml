@@ -101,6 +101,11 @@ startup_cleanup:
     - diagnostics/place_logger.py
     - gui/property_gui.py
     - gui/stiffness_gui.py
+    - tools/goto_q.py                   # 스트레이 팔 이동 (trajectory 발행원)
+    - pose_commander.py
+    - run_foundation_pose.sh            # fp 스택 리더 (자식 패턴은 위에 있음)
+    - fake_arbiter.py                   # 테스트용 가짜 arbiter — 실기 버스 오염원
+    - fake_sequence_publisher.py
   orphan_only:                          # 죽은 launch 의 잔재 (D-1 사고: participant 점유)
     - joint_state_merger
     - joint_states_observer

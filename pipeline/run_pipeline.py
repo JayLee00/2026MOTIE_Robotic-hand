@@ -431,11 +431,15 @@ class Pipeline:
         # 놓친다는 뜻이다.
         st, _ = self._wait_until(self.watch.snapshot, min(10.0, self._discovery_s()))
         self.log(f"arbiter 현재 상태: {self._fmt(st)}")
+        if st is not None and st[1] == SEQ_RUNNING:
+            raise BlockerError(
+                f"시퀀스가 이미 RUNNING 이다 ({self._fmt(st)}) — 다른 소유자가 활성 상태다. "
+                "이전 실행이 아직 돌고 있거나 제어 PC 쪽 클라이언트가 잡고 있다. "
+                "그 프로세스를 종료(또는 완료 대기)한 뒤 다시 실행할 것.")
         if st is not None and st[1] == SEQ_DONE:
-            self.log("이전 체인의 latched DONE 이 남아 있다. 러너는 '새 RUNNING→DONE' 전이만 "
-                     "성공으로 인정하므로 오판하지 않지만, skill 쪽 wait_for_previous_done 이 "
-                     "즉시 통과할 수 있다 → 체인 전체 재실행 전 arbiter 재시작 권장 "
-                     "(collab_policy §4).", "WARN")
+            self.log("이전 체인의 latched DONE 이 남아 있다 — 러너는 '새 RUNNING→DONE' 전이만 "
+                     "인정하고, 조기 spawn 도 grasp 의 새 RUNNING 이후로 미루므로 "
+                     "순서 오발진은 없다 (2026-08-17 대책 적용됨).", "WARN")
 
     def _check_camera(self):
         topics = self.cfg["ros"]["camera_topics"]
@@ -858,7 +862,7 @@ class Pipeline:
                     Proc(stage, cmd, self.logdir / f"skill_{stage}.log", self.log))
 
     # ── 단계 실행 ────────────────────────────────────────────────────────
-    def run_stage(self, stage: str):
+    def run_stage(self, stage: str, on_running=None):
         number = self.cfg["sequence_numbers"][stage]
         timeout = self.cfg["timeouts_s"][stage] * self.args.timeout_scale
         self.log.rule(f"seq {number} — {KOREAN[stage]} ({stage})")
@@ -878,7 +882,7 @@ class Pipeline:
         else:
             self.log("이 단계는 상시 서버가 담당한다 — arbiter 의 DONE 만 관측한다")
 
-        ok, why = self.wait_sequence(number, timeout, proc)
+        ok, why = self.wait_sequence(number, timeout, proc, on_running=on_running)
         if not ok:
             if proc:
                 proc.stop()      # 하트비트 끊김 → arbiter 3초 내 IDLE 회수
@@ -895,11 +899,15 @@ class Pipeline:
                 self.log(f"'{stage}' 프로세스가 아직 살아 있다 → 정리", "WARN")
                 proc.stop()
 
-    def wait_sequence(self, number: int, timeout_s: float, proc: Proc | None):
+    def wait_sequence(self, number: int, timeout_s: float, proc: Proc | None,
+                      on_running=None):
         """[number, DONE] 로의 **새로운** RUNNING→DONE 전이를 기다린다.
 
         latched 로 남은 이전 체인의 DONE 을 성공으로 오인하지 않도록, RUNNING 을 한 번
         본 뒤의 DONE 만 인정한다(collab_policy §4).
+        on_running: 이 단계의 **새 RUNNING 전이를 처음 본 순간** 1회 호출되는 콜백 —
+        조기 spawn(inhand 프리워밍)을 여기에 걸면 스테일 latched DONE 이 남아 있어도
+        뒷단계 skill 이 파지 전에 오발진하지 않는다 (2026-08-17 실사고 대책).
         """
         start = time.monotonic()
         saw_running = False
@@ -913,6 +921,8 @@ class Pipeline:
                 seq_id, state, _owner = st
                 if seq_id == number:
                     if state == SEQ_RUNNING:
+                        if not saw_running and on_running is not None:
+                            on_running()
                         saw_running = True
                     elif state == SEQ_DONE and saw_running:
                         return True, "DONE"
@@ -974,13 +984,19 @@ class Pipeline:
                      f"(번호 {self.ctx['fruit_num']})")
             # 매 바퀴 pick 초기 위치로 천천히 복귀 후 pick 부터 시작 (2026-08-17)
             self.goto_pick_home("체인 시작" if lap == 1 else "place 완료 → 다음 체인 준비")
-            self.spawn_early_stages()
+            # 조기 spawn 은 grasp 의 **새 RUNNING 전이를 본 순간** 실행한다 — 스테일
+            # latched [1,DONE] 이 남아 있어도 inhand 가 파지 전에 오발진하지 않는다.
+            # (grasp 를 --skip 하면 종전대로 바퀴 시작 시 즉시 spawn)
+            if "grasp" in self.args.skip:
+                self.spawn_early_stages()
             for stage in ORDER:
                 if stage in self.args.skip:
                     self.log(f"seq {self.cfg['sequence_numbers'][stage]} ({stage}) skip",
                              "WARN")
                     continue
-                self.run_stage(stage)
+                self.run_stage(stage,
+                               on_running=(self.spawn_early_stages
+                                           if stage == "grasp" else None))
             self.log.rule(f"바퀴 {lap} 완료 ✅")
             if self.args.loops and lap >= self.args.loops:
                 break
