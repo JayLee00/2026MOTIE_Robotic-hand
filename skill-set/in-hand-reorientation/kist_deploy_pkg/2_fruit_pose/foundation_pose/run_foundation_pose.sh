@@ -54,6 +54,7 @@ while [ $# -gt 0 ]; do
     --mesh)    MESH="$2"; MESH_EXPLICIT=1; shift ;;
     --fruit)   FRUIT="$2"; shift ;;
     --seg-hz)  SEGHZ="$2"; shift ;;
+    --reseg-every) RESEG="$2"; shift ;;   # 세그 N프레임마다 자세투영 점으로 재시드
     --no-click) NOCLICK="--no-click" ;;
     --no-overlay) NOOVERLAY=1 ;;   # 자체 fruit_overlay 창을 띄우지 않음
                                    # (Visualization/live_viz.py 로 대체할 때 창 중복 방지)
@@ -175,8 +176,11 @@ else
 fi
 
 echo "── 4) ROS2 브리지 (호스트, SAM2 초기 마스크) ──"
+# --reseg-every 기본 15: seg 5Hz × 15프레임 = 3초마다 "손 안(자세투영 점)" 재시드
+# (fp_ros_node 자체 기본 30 = 6초 → 데모 요구인 3초 주기로 당김. 클릭 시드는 항상 켬)
 /usr/bin/python3 "$HERE/fp_ros_node.py" \
-  --server "127.0.0.1:$PORT" --ns "$PUB_NS" --seg-hz "${SEGHZ:-5}" ${NOCLICK:-} \
+  --server "127.0.0.1:$PORT" --ns "$PUB_NS" --seg-hz "${SEGHZ:-5}" \
+  --reseg-every "${RESEG:-15}" ${NOCLICK:-} \
   --color-topic "$COLOR_FAST" --depth-topic "$DEPTH" --info-topic "$INFO" \
   >/tmp/fp_node.log 2>&1 &
 PIDS+=($!)
