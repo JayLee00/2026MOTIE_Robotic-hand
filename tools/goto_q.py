@@ -11,6 +11,14 @@
 Cartesian 대신 관절각이다. 플랜 자체가 planning scene(정적 박스 + 자가충돌)
 검사를 통과한 것이므로 "걸리는 것 없는지"는 플랜 성공이 보증한다.
 
+임피던스 제어 안전 (2026-08-16):
+  · 실행 체인은 [이 도구] → trajectory_bridge(관절명 리맵만) → 제어 PC
+    trajectory_receiver → 임피던스 제어기다. MoveIt 플랜의 웨이포인트 간격은
+    ~0.1s 수준이라, 수신기가 보간을 안 하면 임피던스 팔이 스텝마다 튈 수 있다.
+    → 전송 전에 궤적을 --resample-hz(기본 100Hz)로 선형 재샘플해 스텝을
+    항상 미세하게 만든다 (수신기 보간 여부와 무관하게 안전).
+  · 속도/가속 스케일 기본 0.1 — 기존 검증된 pose_commander.py 와 동일 프로필.
+
 전제: MoveIt 트윈 기동(move_group 1개, joint_state_mode:=direct — 실기 시작상태 필요),
       source tools/env/setup_env.sh, /usr/bin/python3.
 종료 코드: 0=성공(플랜/실행), 1=실패.
@@ -25,9 +33,47 @@ import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
 
+import numpy as np
+
 from control_msgs.action import FollowJointTrajectory
 from moveit_msgs.action import MoveGroup
 from moveit_msgs.msg import Constraints, JointConstraint, MoveItErrorCodes
+from trajectory_msgs.msg import JointTrajectoryPoint
+
+from builtin_interfaces.msg import Duration
+
+
+def resample_traj(traj, hz: float):
+    """JointTrajectory 를 고정 rate 로 선형 재샘플 (positions + velocities).
+
+    MoveIt 시간 매개변수화는 ~0.1s 간격의 웨이포인트를 준다. 임피던스 제어기로
+    가는 경로에서 스텝을 미세하게 유지하기 위해 hz 간격으로 촘촘히 채운다.
+    (stiffness 모듈 moveit_arm_mover.py 의 _resample 과 같은 접근)
+    """
+    pts = traj.points
+    if len(pts) < 2 or hz <= 0:
+        return traj
+    t = np.array([p.time_from_start.sec + p.time_from_start.nanosec * 1e-9 for p in pts])
+    Q = np.array([list(p.positions) for p in pts], dtype=float)
+    has_vel = all(len(p.velocities) == Q.shape[1] for p in pts)
+    V = (np.array([list(p.velocities) for p in pts], dtype=float) if has_vel else None)
+    T = float(t[-1])
+    ts = np.arange(0.0, T, 1.0 / hz)
+    ts = np.append(ts, T)                      # 마지막 점(목표)은 정확히 포함
+    new_pts = []
+    for tk in ts:
+        p = JointTrajectoryPoint()
+        p.positions = [float(np.interp(tk, t, Q[:, j])) for j in range(Q.shape[1])]
+        if V is not None:
+            p.velocities = [float(np.interp(tk, t, V[:, j])) for j in range(Q.shape[1])]
+        p.time_from_start = Duration(sec=int(tk), nanosec=int((tk - int(tk)) * 1e9))
+        new_pts.append(p)
+    step = np.max(np.abs(np.diff(np.array([q.positions for q in new_pts]), axis=0))) \
+        if len(new_pts) > 1 else 0.0
+    traj.points = new_pts
+    print(f"[goto_q] 재샘플 {hz:.0f}Hz — {len(pts)} → {len(new_pts)} points, "
+          f"최대 스텝 {step:.4f} rad (임피던스 안전)", flush=True)
+    return traj
 
 
 class GotoQ(Node):
@@ -128,10 +174,13 @@ def main():
     p.add_argument("--group", default="right_arm")
     p.add_argument("--prefix", default="right_fr3", help="관절 이름 접두 (기본 right_fr3)")
     p.add_argument("--traj-action", default="/right_arm_controller/follow_joint_trajectory")
-    p.add_argument("--vel-scale", type=float, default=0.3)
-    p.add_argument("--acc-scale", type=float, default=0.3)
+    p.add_argument("--vel-scale", type=float, default=0.1,
+                   help="속도 스케일 (기본 0.1 = 기존 pose_commander 검증 프로필)")
+    p.add_argument("--acc-scale", type=float, default=0.1)
     p.add_argument("--plan-time", type=float, default=5.0)
     p.add_argument("--retries", type=int, default=5)
+    p.add_argument("--resample-hz", type=float, default=100.0,
+                   help="전송 전 궤적 재샘플 주파수 [Hz], 0=재샘플 안 함")
     p.add_argument("--plan-only", action="store_true", help="플랜(충돌검사)만 하고 이동하지 않음")
     p.add_argument("--yes", action="store_true", help="실행 확인 프롬프트 생략")
     a = p.parse_args()
@@ -151,6 +200,7 @@ def main():
             if ans not in ("y", "yes"):
                 print("[goto_q] 취소")
                 return 1
+        traj = resample_traj(traj, a.resample_hz)
         return 0 if node.execute(traj) else 1
     except KeyboardInterrupt:
         return 130
