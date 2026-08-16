@@ -71,6 +71,38 @@ inhand_policy:
                      # 종료 후 goto+squeeze 재파지로 마무리. 비전 기반 종료판정은 후속 과제.
   device: cuda:1     # 추론 GPU — place 서비스(GPU0 Molmo ~17GB)와 분리
 
+# 시작 시 이전 실행 고아 잔재 일괄 정리 (2026-08-17 사용자 지시: "시작하면 다 죽이고 시작").
+# always: per-run 프로세스 — 새 체인 시작 시 살아 있으면 무조건 잘못된 것 (가로채기/중복 발행원).
+# orphan_only: 부모가 죽어 systemd/init 에 입양된 것만 종료 — 살아있는 트윈(재사용)은 보호.
+startup_cleanup:
+  always:
+    - vision_pipeline.skill_server      # 구 vision place 서버 (client_id 4 가로채기)
+    - seq4_manual_place.py              # 수동 place 잔재 (client_id 4)
+    - inhand_policy_sequence_2.py
+    - inhand_sequence_2.py
+    - run_kist_vtdp.py                  # VTDP 정책 잔재 (q_target 발행원)
+    - run_scenario1_host.py
+    - deploy_task3_ros2_demo.py
+    - deploy_task3_ros2.py
+    - foundation_pose/fp_server.py
+    - foundation_pose/fp_ros_node.py
+    - foundation_pose/fruit_label_node.py
+    - record/fruit_overlay.py
+    - Visualization/live_viz.py
+    - image_transport/republish
+    - hand_cmd_logger.py
+    - tools/sync_target.py
+    - diagnostics/place_logger.py
+    - gui/property_gui.py
+    - gui/stiffness_gui.py
+  orphan_only:                          # 죽은 launch 의 잔재 (D-1 사고: participant 점유)
+    - joint_state_merger
+    - joint_states_observer
+    - planning_scene_static_boxes
+    - move_group
+    - rviz2
+    - robot_state_publisher
+
 # 상시 서버 (파이프라인 시작 전에 떠 있어야 하는 것들)
 services:
   # place 모델 마이크로서비스 5종 (conda 환경별 HTTP 서버)

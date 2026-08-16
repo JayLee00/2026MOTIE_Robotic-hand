@@ -590,6 +590,83 @@ class Pipeline:
             time.sleep(5.0)
         raise StageError(f"모델 서비스 기동 타임아웃: {still}\n{p.tail(40)}")
 
+    def startup_cleanup(self):
+        """시작 시 이전 실행 고아 잔재 일괄 정리 (2026-08-17 사용자 지시).
+
+        always 목록: per-run 프로세스 — 새 체인 시작 시 살아 있으면 무조건 잘못된 것
+        (client_id 가로채기·중복 q_target 발행원·스테일 카메라 소비자).
+        orphan_only 목록: 부모가 죽어 systemd/init 에 입양된 것만 종료 — 살아있는
+        트윈(러너가 재사용)은 부모(ros2 launch)가 살아 있으므로 보호된다.
+        """
+        cc = self.cfg.get("startup_cleanup") or {}
+        # 자기 자신 + 조상 프로세스 체인 전체 제외 (래퍼 셸의 argv 에 패턴 문자열이
+        # 들어 있는 특수한 호출 환경에서도 자기 계보를 죽이지 않도록)
+        me = set()
+        p = os.getpid()
+        while p > 1 and p not in me:
+            me.add(p)
+            try:
+                with open(f"/proc/{p}/stat") as f:
+                    p = int(f.read().rsplit(")", 1)[1].split()[1])
+            except OSError:
+                break
+
+        def find(pat):
+            out = subprocess.run(["pgrep", "-f", pat], capture_output=True, text=True)
+            return [int(p) for p in out.stdout.split() if int(p) not in me]
+
+        def orphaned(pid):
+            try:
+                with open(f"/proc/{pid}/stat") as f:
+                    ppid = int(f.read().rsplit(")", 1)[1].split()[1])
+                if ppid <= 1:
+                    return True
+                with open(f"/proc/{ppid}/comm") as f:
+                    return f.read().strip() == "systemd"
+            except OSError:
+                return False
+
+        doomed: dict[int, str] = {}
+        for pat in cc.get("always") or []:
+            for p in find(pat):
+                doomed.setdefault(p, pat)
+        for pat in cc.get("orphan_only") or []:
+            for p in find(pat):
+                if orphaned(p):
+                    doomed.setdefault(p, f"{pat} (고아)")
+        if not doomed:
+            self.log("이전 실행 잔재 없음 ✓")
+            return
+        self.log.rule("이전 실행 고아 잔재 정리")
+        for p, pat in sorted(doomed.items()):
+            self.log(f"  종료 대상 pid {p}: {pat}", "WARN")
+        def alive(pid):
+            try:
+                with open(f"/proc/{pid}/stat") as f:
+                    state = f.read().rsplit(")", 1)[1].split()[0]
+                return state not in ("Z", "X")     # 좀비/종료중 = 죽은 것
+            except OSError:
+                return False
+
+        for p in doomed:
+            try:
+                os.kill(p, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        time.sleep(3.0)
+        survivors = [p for p in doomed if alive(p)]
+        for p in survivors:
+            try:
+                os.kill(p, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        if survivors:
+            time.sleep(1.0)
+        left = [p for p in doomed if alive(p)]
+        if left:
+            raise StageError(f"잔재 종료 실패 (pid {left}) — 수동 확인 필요")
+        self.log(f"잔재 {len(doomed)}개 정리 완료 ✓")
+
     def _place_manual(self) -> bool:
         """place 단계에 command 가 있으면 수동 티칭 체인 모드 — vision 서버 불필요."""
         return bool((self.cfg["stages"].get("place") or {}).get("command"))
@@ -815,6 +892,8 @@ class Pipeline:
         self.log(f"로그 디렉토리: {self.logdir}")
         self.log(f"대상 과일(파지 쿼리): {self.args.fruit!r} / 강성 모델 과일: "
                  f"{self.stiff_fruit} (번호 {self.ctx['fruit_num']})")
+        if not self.args.dry_run:
+            self.startup_cleanup()          # 이전 실행 고아 잔재부터 정리하고 시작
         self.preflight()
         if self.args.dry_run:
             self.log("--dry-run: preflight 까지만 수행하고 종료한다 (로봇 미동작)")
