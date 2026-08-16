@@ -347,6 +347,12 @@ class RosBackend:
         # subscription there would miss the handover value exactly when we need it.
         self._cam_node.create_subscription(Float32MultiArray, TOPIC_HAND_QTAR, self._on_hand_qtar,
                                            qos_profile_sensor_data)
+        # 2026-08-16 런어웨이 사고 가드: 버스에서 관측된 cmd_mode 를 캐시한다. 외부(제어 PC
+        # 측 등)에서 mode 0(Voltage) 명령이 흐르면 홀드 스레드가 counts 스트리밍을 즉시
+        # 끊어야 한다 — 내부 플래그(_hand_in_voltage)는 우리 release 경로만 알기 때문.
+        self._hand_cmd_mode_seen = None
+        self._cam_node.create_subscription(Int32, TOPIC_HAND_MODE, self._on_hand_cmd_mode,
+                                           qos_profile_sensor_data)
         self._cam_exec = SingleThreadedExecutor()
         self._cam_exec.add_node(self._cam_node)
         self._cam_thread = threading.Thread(target=self._cam_exec.spin, daemon=True)
@@ -398,6 +404,15 @@ class RosBackend:
     def _on_caminfo(self, m):
         with self._lock:
             self._K = np.asarray(m.k, float).reshape(3, 3)
+
+    def _on_hand_cmd_mode(self, m):
+        """버스에서 관측된 /hand/right/cmd_mode 캐시 (카메라 executor 스레드).
+
+        누가 보냈든(우리 포함) 마지막 모드 명령을 기억한다. 홀드 스레드는 이 값이
+        0(Voltage)이면 counts 재발행을 즉시 중단한다 — counts 가 duty 로 오해석되는
+        런어웨이(2026-08-16 실사고) 차단. 우리 자신의 mode=1 발행은 무해하게 갱신된다.
+        """
+        self._hand_cmd_mode_seen = int(m.data)
 
     def _on_hand_qtar(self, m):
         """Cache the last EXTERNAL hand target (Position counts) for the grip handover.
@@ -634,6 +649,14 @@ class RosBackend:
             while not self._hand_hold_stop.wait(period):
                 if self._hand_in_voltage:             # release path took over -> counts are no
                     break                             # longer a valid command; stop immediately
+                if self._hand_cmd_mode_seen == 0:     # 외부發 Voltage 전환 감지 (2026-08-16 사고)
+                    try:                              # -> counts 는 즉시 유해. 스트리밍 중단.
+                        self.node.get_logger().warn(
+                            "GRIP HOLD 중단: 버스에서 cmd_mode=0(Voltage) 관측 — "
+                            "counts 스트리밍을 멈춘다 (counts→duty 런어웨이 방지)")
+                    except Exception:                 # noqa: BLE001
+                        pass
+                    break
                 try:
                     self._hand_qtar_pub.publish(msg)
                 except Exception:                     # noqa: BLE001 — teardown races
