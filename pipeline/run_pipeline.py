@@ -372,6 +372,7 @@ class Pipeline:
         if self._place_manual():
             self.log("place 수동 체인 모드 (stages.place.command 설정됨) — "
                      "vision place 서버·모델 서비스 5종 불필요, 점검 생략")
+            self._check("no_vision_place_server", self._ensure_no_vision_place_server)
         else:
             self._check("model_services", self.ensure_services, auto_startable=True)  # 러너가 기동
 
@@ -592,6 +593,40 @@ class Pipeline:
     def _place_manual(self) -> bool:
         """place 단계에 command 가 있으면 수동 티칭 체인 모드 — vision 서버 불필요."""
         return bool((self.cfg["stages"].get("place") or {}).get("command"))
+
+    def _ensure_no_vision_place_server(self):
+        """수동 place 모드에서 구 vision place 서버(skill_server)가 떠 있으면 같은
+        client_id 4 로 seq 4 제어권을 선점해 manual 체인을 가로챈다 (2026-08-17 00:43
+        실사고 — 고아 서버 4개가 남아 있었다). 발견 즉시 종료시킨다."""
+        pat = "vision_pipeline.skill_server"
+        find = lambda: [int(p) for p in subprocess.run(
+            ["pgrep", "-f", pat], capture_output=True, text=True).stdout.split()]
+        pids = find()
+        if not pids:
+            self.log("구 vision place 서버 없음 ✓ (client_id 4 충돌 없음)")
+            return
+        if self.args.dry_run:
+            raise BlockerError(
+                f"구 vision place 서버가 떠 있다 (pid {pids}) — manual place 체인을 "
+                f"가로챈다. 종료할 것: pkill -f {pat}")
+        self.log(f"구 vision place 서버 {len(pids)}개 발견 (pid {pids}) — manual 체인 "
+                 "가로채기 방지를 위해 종료시킨다", "WARN")
+        for p in pids:
+            try:
+                os.kill(p, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+        time.sleep(3.0)
+        for p in find():
+            try:
+                os.kill(p, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        time.sleep(1.0)
+        left = find()
+        if left:
+            raise StageError(f"구 vision place 서버 종료 실패 (pid {left}) — 수동 확인 필요")
+        self.log("구 vision place 서버 정리 완료 ✓")
 
     def start_place_server(self):
         if self._place_manual():
