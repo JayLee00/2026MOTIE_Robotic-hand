@@ -1,0 +1,43 @@
+# 과일 카탈로그 — 종류당 대표 CAD 1개.
+#
+#   id       : 라벨 정수. /fruit/type 으로 발행된다. 0 = 없음/미지정.
+#              한 번 부여하면 바꾸지 마세요 — HDF5 에 그대로 들어갑니다.
+#   name     : 영문 슬러그. --fruit 인자로 이 이름을 씁니다.
+#   name_ko  : 표시용.
+#   mesh     : foundation_pose/ 기준 상대경로. prepare_mesh.py 로 만든 것.
+#   nominal  : 대표 CAD 의 축 길이 [m] (긴축부터). 실측 참고용이며,
+#              실제 발행되는 /fruit/size 는 기본적으로 **비전 측정값**이다
+#              (개체마다 크기가 다르므로). fp_ros_node --size-source cad 로
+#              이 값을 그대로 쓰게 할 수도 있다.
+#
+# 새 과일 추가:
+#   1) 스캔 → python3 prepare_mesh.py scan.obj -o assets/<name>.obj \
+#             --target-extents <장>,<단>,<단>
+#   2) 아래에 항목 추가 (id 는 다음 번호)
+
+fruits:
+  - id: 1
+    name: lemon
+    name_ko: 레몬
+    mesh: assets/lemon.obj
+    nominal: [0.070, 0.055, 0.055]
+
+  - id: 2
+    name: plum
+    name_ko: 자두
+    mesh: assets/plum.obj
+    nominal: [0.063, 0.060, 0.060]   # 실측 대표값 (개체차 있음)
+
+  - id: 3
+    name: mandarin
+    name_ko: 감귤
+    mesh: assets/mandarin.obj
+    nominal: [0.060, 0.060, 0.046]   # 폭 60, 꼭지축 46 (납작한 형태)
+
+  - id: 4
+    name: peach
+    name_ko: 복숭아
+    mesh: assets/peach.obj
+    nominal: [0.068, 0.068, 0.065]   # 둘레 68, 꼭지-엉덩이 65
+    # ⚠ 스캔이 한 축으로 ~25% 늘어나 있어(87.8 vs 실측 68) 실측에 맞춰 눌렀다.
+    #   형상은 맞지만 텍스처가 그만큼 찌그러진다. 회전이 잘 안 잡히면 재스캔 권장.

@@ -1,0 +1,31 @@
+# stiffness [N/mm] — ★ 구 측정값(shm rig 시절, data/ecoflex_data/object_labels/stif.yaml)을
+# 크기+무게 전역 1:1 매칭(2026-08-05, ecoflex2fruit README '신·구 라벨 매칭' 절)으로
+# 새 개체번호에 이식한 것. mass/size 는 새 측정값 그대로(object_labels 와 동일).
+# 근거: 새 laser 측정이 고강성(vyta-40/60)에서 포화·비일관 — 구 측정은 가족 내 일관.
+# ★ 2026-08-05 확정: 10 = vytaflex-60_60(13.82), 17 = ecoflex-30_65(1.15),
+#   9 = vytaflex-40_60(10.07). (10 은 vyta-20_62 가설을 거쳐 vyta-60_60 으로 최종 확정)
+normalize:
+  min: 0.67
+  max: 13.82
+
+utils:
+  dict:
+    1: 12.98  # ecoflex_1  = vytaflex-60_55
+    2: 9.02   # ecoflex_2  = vytaflex-40_55
+    3: 3.02   # ecoflex_3  = vytaflex-20_57
+    4: 2.98   # ecoflex_4  = vytaflex-20_55
+    5: 1.60   # ecoflex_5  = ecoflex-45_55
+    6: 0.75   # ecoflex_6  = ecoflex-20_55
+    7: 1.10   # ecoflex_7  = ecoflex-30_55
+    8: 1.65   # ecoflex_8  = ecoflex-50_55
+    9: 10.07  # ecoflex_9  = vytaflex-40_60
+    10: 13.82 # ecoflex_10 = vytaflex-60_60 (★ 확정 — 자동 매칭(Δm 0.2g)과 센서 지각(~8) 일치.
+              #   vyta-20_62=2.81 가설은 v2 실험에서 반증됨: 센서가 8로 지각, 11(2.71)은 정확)
+    11: 2.71  # ecoflex_11 = vytaflex-20_60
+    12: 0.77  # ecoflex_12 = ecoflex-20_60
+    13: 1.16  # ecoflex_13 = ecoflex-30_60
+    14: 1.56  # ecoflex_14 = ecoflex-50_60
+    15: 1.64  # ecoflex_15 = ecoflex-45_60
+    16: 0.67  # ecoflex_16 = ecoflex-20_65
+    17: 1.15  # ecoflex_17 = ecoflex-30_65 (★ 물리 확인으로 확정, 2026-08-05)
+    18: 1.67  # ecoflex_18 = ecoflex-50_65

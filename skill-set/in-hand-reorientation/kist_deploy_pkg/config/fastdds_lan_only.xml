@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- 이 PC(192.168.0.1)용. ROS2(FastDDS)가 Intel 랜포트(enp6s0)+loopback 만 쓰게 강제(WiFi/사내망 제외).
+     디스커버리는 직결 링크 멀티캐스트로. 적용: export FASTRTPS_DEFAULT_PROFILES_FILE=/home/js/fastdds_lan_only.xml 후 노드 재시작. -->
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <profiles>
+    <transport_descriptors>
+      <transport_descriptor>
+        <transport_id>lan_udp</transport_id>
+        <type>UDPv4</type>
+        <interfaceWhiteList>
+          <address>192.168.0.1</address>
+          <address>127.0.0.1</address>
+        </interfaceWhiteList>
+      </transport_descriptor>
+    </transport_descriptors>
+
+    <participant profile_name="lan_only" is_default_profile="true">
+      <rtps>
+        <userTransports>
+          <transport_id>lan_udp</transport_id>
+        </userTransports>
+        <useBuiltinTransports>false</useBuiltinTransports>
+      </rtps>
+    </participant>
+  </profiles>
+</dds>

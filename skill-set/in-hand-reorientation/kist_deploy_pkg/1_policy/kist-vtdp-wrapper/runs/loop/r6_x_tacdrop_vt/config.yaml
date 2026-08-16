@@ -1,0 +1,173 @@
+action:
+  key: 04_hand_j_tar
+  dim: 16
+  pred_horizon: 16
+  exec_horizon: 16
+  stride: 5
+model:
+  d_model: 256
+  cond_dim: 256
+  fusion: cross_attn
+  fusion_kwargs:
+    n_head: 4
+    n_layer: 1
+    modal_embed: true
+    pool: flatten
+  denoiser: unet1d
+  denoiser_kwargs:
+    channels:
+    - 64
+    - 128
+    - 256
+  head: diffusion
+  head_kwargs:
+    diff_steps: 100
+    infer_steps: 10
+  modality_dropout: 0.0
+data:
+  root: /home/js/Desktop/vive_franka_teleop/record/logs
+  keep_dead: false
+  cache_rgb: false
+  rgb_crop:
+  - 71
+  - 0
+  - 551
+  - 480
+  ds_stride: 5
+  seed: 42
+  n_held_out: 8
+  clamp_spec:
+    exp_20260807_031811_lemon_wo_object.h5:
+      0: null
+      1: null
+      2: null
+      3: null
+      4: null
+      5: DELETE
+      6: null
+      7: null
+      8: null
+      9: null
+      10: DELETE
+      11: null
+      12: null
+      13: null
+    exp_20260807_035756_lemon_wo_object_2.h5:
+      0: DELETE
+      1: null
+      2: null
+      3: null
+      4: null
+      5: null
+      6: null
+      7: null
+      8: null
+      9: null
+      10: null
+      11: null
+    exp_20260808_001629_lemon_wo_object_ver3.h5:
+      0: DELETE
+      1: null
+      2: DELETE
+      3: null
+      4: null
+      5: null
+      6: null
+      7: null
+      8: null
+      9: null
+      10: null
+      11: DELETE
+      12: DELETE
+      13: null
+      14: null
+    exp_20260808_025443_lemon_wo_object_ver4.h5:
+      0: null
+      1: null
+      2: null
+      3: DELETE
+      4: null
+      5: null
+      6: null
+      7: null
+      8: DELETE
+      9: null
+      10: null
+      11: null
+      12: null
+      13: DELETE
+      14: null
+      15: null
+      16: DELETE
+      17: null
+      18: null
+      19: DELETE
+      20: null
+      21: null
+      22: DELETE
+      23: null
+      24: null
+      25: null
+      26: DELETE
+      27: DELETE
+      28: null
+      29: DELETE
+      30: null
+      31: null
+train:
+  epochs: 70
+  batch_size: 64
+  lr: 0.0003
+  lr_backbone_scale: 0.1
+  weight_decay: 1.0e-06
+  warmup_steps: 500
+  use_ema: true
+  ema_max_decay: 0.9999
+  eval_every: 5
+  eval_n: 768
+  eval_seed: 7
+  save_every: 10
+  effective_seed: 42
+obs_spec:
+  state:
+    kind: state
+    keys:
+    - 03_hand_j_pos
+    shape: 16
+    horizon: 3
+    stride: 3
+    encoder: mlp
+  tactile:
+    kind: tactile
+    keys:
+    - 10_hand_paxini_ft
+    shape: 12
+    transform: hp
+    transform_kwargs:
+      tau: 100.0
+    horizon: 3
+    stride: 10
+    encoder: conv1d
+    encoder_kwargs:
+      n_part: 4
+      time_embed: true
+      kernel_size: 3
+      alpha_init: 0.01
+      dropout: 0.2
+  rgb:
+    kind: vision
+    keys:
+    - 40_image
+    shape:
+    - 3
+    - 224
+    - 224
+    horizon: 3
+    stride: 3
+    encoder: resnet18
+    encoder_kwargs:
+      pretrained: true
+      frozen: true
+      norm: auto
+      tokens: pool
+      num_kp: 32

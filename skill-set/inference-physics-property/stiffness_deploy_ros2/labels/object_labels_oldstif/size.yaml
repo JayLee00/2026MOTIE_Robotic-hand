@@ -1,0 +1,24 @@
+normalize:
+  min: 54.54
+  max: 67.20
+
+utils:
+  dict:
+    1: 54.94  # ecoflex_1
+    2: 54.92  # ecoflex_2
+    3: 57.01  # ecoflex_3
+    4: 56.31  # ecoflex_4
+    5: 54.57  # ecoflex_5
+    6: 55.17  # ecoflex_6
+    7: 54.92  # ecoflex_7
+    8: 54.54  # ecoflex_8
+    9: 59.45  # ecoflex_9
+    10: 61.94  # ecoflex_10
+    11: 59.62  # ecoflex_11
+    12: 58.95  # ecoflex_12
+    13: 59.62  # ecoflex_13
+    14: 58.67  # ecoflex_14
+    15: 59.77  # ecoflex_15
+    16: 65.19  # ecoflex_16
+    17: 67.20  # ecoflex_17
+    18: 65.97  # ecoflex_18

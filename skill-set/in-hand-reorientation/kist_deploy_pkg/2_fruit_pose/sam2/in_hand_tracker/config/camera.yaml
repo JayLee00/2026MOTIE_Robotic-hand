@@ -1,0 +1,15 @@
+# Camera intrinsics for the Replicator render rig.
+#
+# Derived from camera_params.json (focal=24.0, aperture=[20.955, 15.716]) at
+# 640x480:  fx = 640 * 24 / 20.955 = 733.0,  fy = 480 * 24 / 15.716 = 733.0,
+# cx = width/2 = 320,  cy = height/2 = 240.  Square pixels.
+#
+# NOTE: there is intentionally NO global extrinsic here. The camera->world
+# extrinsic is PER SEQUENCE and read at runtime from each sequence's
+# camera_pose.json (== poses.camera): pos_offset + rotation_wxyz.
+width: 640
+height: 480
+fx: 733.0
+fy: 733.0
+cx: 320.0
+cy: 240.0

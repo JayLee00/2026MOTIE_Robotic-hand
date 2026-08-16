@@ -1,0 +1,43 @@
+# Install PyTorch first (CUDA build must match your driver; cu124 works on most recent NVIDIA GPUs):
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+#
+# Then GPU extensions (need nvcc; set CUDA_HOME to your toolkit, e.g. /usr/local/cuda):
+#   pip install --no-build-isolation git+https://github.com/facebookresearch/pytorch3d.git
+#   pip install --no-build-isolation git+https://github.com/NVlabs/nvdiffrast.git
+#
+# Then this file:
+#   pip install -r requirements.txt
+
+# Core numerics & IO
+numpy>=2
+scipy
+scikit-learn
+h5py
+joblib
+
+# Config / serialization
+PyYAML>=6
+ruamel.yaml>=0.18
+
+# Vision & 3D
+opencv-python
+imageio
+open3d
+trimesh
+transformations
+matplotlib
+pandas
+Pillow
+pyrender
+pyOpenGL>=3.1
+pyOpenGL_accelerate>=3.1
+
+# Inference stack (torch installed separately)
+kornia>=0.7
+omegaconf>=2.3
+psutil
+tqdm
+warp-lang
+
+# Optional: faster / utility (import guarded in code)
+scikit-image

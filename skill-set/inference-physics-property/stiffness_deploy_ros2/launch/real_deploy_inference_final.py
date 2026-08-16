@@ -169,6 +169,66 @@ FRUIT_CONFIG = {
 # =====================================================================
 
 
+# ---------- 촉각 포화 글리치 가드 (2026-08-11 추가) ----------
+#   무엇: paxini 127점이 동시에 포화값 25.5 를 찍어 손가락 합력이 Σ127 = 3238.5 가
+#         되는 현상(정상 |resultant| ~20 의 160배). 실측 0.4% 의 파지에서 나오고
+#         대부분 2~3프레임 스파이크다.
+#   왜 여기서 고치나: 학습 파이프라인에는 '글리치 비율이 구간의 1% 를 넘으면 그 구간을
+#         버린다' 는 필터가 있는데 (a) 2~3프레임은 508프레임 구간에서 0.6% 라 **그
+#         필터를 통과하고** (b) 배포에서는 애초에 라이브 파지를 버릴 수 없다.
+#         → 버리는 대신 **이웃 정상 프레임으로 보간해 고친다**.
+#
+#   ★ 실측 (deep_ws/src/ecoflex2fruit phase4-1, 8시드 · 처음 보는 개체 4개):
+#       클램프 없이   : 3프레임 글리치 주입 시 mass MAE 4.51 → 22.36 (8/8, p<0.001)
+#       CLAMP_Z=5 켬  : mass MAE Δ −0.05 (ns) — **지금 설정에서는 이미 무해하다**
+#     즉 이 가드가 당장 바꾸는 성능은 사실상 0 이다. 그래도 넣는 이유:
+#       ① CLAMP_Z 는 끌 수 있는 튜너블이고(0 이면 비활성) 전 채널에 걸리는 무차별
+#          안전망이다 — 특정 센서 고장 방어를 거기에 의존하면 안 된다.
+#       ② 클램프는 글리치 값을 ±5σ 로 **눌러 둘 뿐** 여전히 틀린 값이 남는다.
+#          이 가드는 그 프레임을 실제에 가까운 값으로 **되돌린다**.
+#       ③ 학습 전처리(deep_ws config.SAT_MODE="repair")와 같은 처리를 배포에도 두어
+#          두 경로가 어긋나지 않게 한다.
+#   ⚠ 드리프트(파지 도중 시작하는 영점 이동)는 이 가드로 **안 막힌다** — 클램프로도
+#     안 막힌다(실측 stif MAE +1.85, p<0.001). 별도 대응이 필요하다.
+SAT_RESULTANT_MAX = 50.0     # 손가락별 |resultant| 성분이 이 값을 넘으면 포화로 본다
+SAT_REPAIR_MAX_FRAC = 0.5    # 프레임의 이 비율을 넘게 포화면 보간이 창작이 된다 → 포기
+
+
+def despike_saturation(buf, verbose=None):
+    """buf["resultant"](·"tactile") 의 포화 프레임을 이웃 정상 프레임으로 선형 보간.
+
+    반환: 고친 프레임 수 (0 이면 아무것도 안 했다).
+    """
+    verbose = DEBUG if verbose is None else verbose
+    res = buf.get("resultant")
+    if not res:
+        return 0
+    r = np.asarray(res, dtype=np.float32).reshape(len(res), -1)      # (n, 12)
+    bad_m = np.abs(r).max(axis=1) > SAT_RESULTANT_MAX
+    if not bad_m.any():
+        return 0
+    if bad_m.mean() > SAT_REPAIR_MAX_FRAC:               # 거의 전부 포화 → 못 고친다
+        if verbose:
+            print(f"[sat] 포화 {bad_m.mean()*100:.0f}% — 보간 포기(입력 그대로 진행)")
+        return 0
+    good = np.flatnonzero(~bad_m)
+    bad = np.flatnonzero(bad_m)
+    if len(good) < 2:
+        return 0
+    for key in ("resultant", "tactile"):
+        seq = buf.get(key)
+        if not seq:
+            continue
+        a = np.asarray(seq, dtype=np.float32)
+        flat = a.reshape(len(a), -1)
+        flat[bad] = np.stack([np.interp(bad, good, flat[good, c])
+                              for c in range(flat.shape[1])], axis=1)
+        buf[key] = list(flat.reshape(a.shape))
+    if verbose:
+        print(f"[sat] 포화 글리치 {len(bad)}프레임 보간 복구 (총 {len(r)}프레임)")
+    return int(len(bad))
+
+
 # ---------- 학습과 동일한 변환들 ----------
 def resultant_from_tactile(tac):
     """17 (4,127,3) -> 18 (4,3). 수집코드와 동일: nan_to_num 후 점축 합."""
@@ -516,6 +576,7 @@ class StiffnessInferenceEngine:
     def reset(self):
         """다음 데모(누름) 위해 버퍼 비움."""
         self.buf = {"joint": [], "ft": [], "resultant": [], "tactile": []}
+        self.last_desat = 0          # 직전 infer 에서 보간 복구한 포화 프레임 수
 
     def add_sample(self, hand_shm, paxini_reader):
         """스퀴즈+hold 구간에서 매 제어주기마다 호출. 유효 샘플만 적재.
@@ -550,6 +611,10 @@ class StiffnessInferenceEngine:
         n = len(self.buf["resultant"])
         if n < MIN_LEN:
             return None, None, None
+        #   ★ 포화 글리치 복구 — build_sensor 앞이어야 한다. downsample_avg(FACTOR=10)
+        #     가 평균을 내기 전에 고쳐야 하고(평균에 섞이면 한 칸이 통째로 오염된다),
+        #     detect_failed_fingers 의 손가락 판정도 성한 값으로 해야 한다.
+        self.last_desat = despike_saturation(self.buf)
         sensor_raw = build_sensor(self.buf, self.mask_grip, fruit=self.fruit)
         s = downsample_avg(sensor_raw, FACTOR, offset=0)
         if len(s) < 1:
