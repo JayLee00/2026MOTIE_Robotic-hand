@@ -606,6 +606,29 @@ class Pipeline:
         cmd = fill(self.cfg["services"]["place_logger"], self.ctx)
         return self.pool.add(Proc("place_logger", cmd, self.logdir / "place_logger.log", self.log))
 
+    def start_fruit_viz(self):
+        """과일 6DoF 오버레이(FoundationPose 3D bbox) — seq 2 데모 화면.
+
+        등록(과일 락)에 시간이 걸리므로 체인 시작 시 미리 띄운다. 보조 화면이므로
+        실패해도 체인은 계속 간다(WARN 만). --no-fruit-viz 로 끈다.
+        """
+        template = self.cfg["services"].get("fruit_viz")
+        if not template or self.args.no_fruit_viz:
+            if self.args.no_fruit_viz:
+                self.log("--no-fruit-viz — 과일 6DoF 오버레이를 띄우지 않는다", "WARN")
+            return None
+        self.log.rule("과일 6DoF 오버레이 기동 (FoundationPose — seq 2 화면)")
+        cmd = fill(template, self.ctx)
+        p = self.pool.add(Proc("fruit_viz", cmd, self.logdir / "fruit_viz.log", self.log))
+        pattern = self.cfg["services"].get("fruit_viz_ready_pattern", "fp_server 준비 완료")
+        if wait_for_log_pattern(p, pattern,
+                                self.cfg["timeouts_s"].get("fruit_viz_ready", 300), self.log):
+            self.log("fruit_viz 준비 — 오버레이 창에서 과일을 클릭하면 3D bbox 가 붙는다")
+        else:
+            self.log("fruit_viz 가 준비되지 않았다 — 오버레이 없이 체인을 계속한다\n"
+                     + p.tail(15), "WARN")
+        return p
+
     def _stage_template(self, stage: str):
         """단계 명령 템플릿. inhand 는 --inhand-legacy 시 HDF5 재생 경로로 전환한다."""
         st = self.cfg["stages"].get(stage) or {}
@@ -723,6 +746,7 @@ class Pipeline:
 
         self.start_place_server()
         self.start_place_logger()
+        self.start_fruit_viz()
         self.spawn_early_stages()
 
         for stage in ORDER:
@@ -754,6 +778,8 @@ def parse_args(cfg: dict):
                    help="place 모델 서비스 5종: auto=없으면 기동(기본), off=이미 떠 있어야 함")
     p.add_argument("--twin", choices=["auto", "off"], default="auto",
                    help="MoveIt 트윈: auto=없으면 기동(기본), off=이미 떠 있어야 함")
+    p.add_argument("--no-fruit-viz", action="store_true",
+                   help="과일 6DoF 오버레이(FoundationPose 3D bbox 창)를 띄우지 않는다")
     p.add_argument("--inhand-legacy", action="store_true",
                    help="seq 2 를 기존 HDF5 궤적 재생(inhand_sequence_2.py)으로 되돌린다 "
                         "(기본: VTDP 학습 정책)")

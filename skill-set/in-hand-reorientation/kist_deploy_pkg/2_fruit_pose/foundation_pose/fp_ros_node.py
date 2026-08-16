@@ -45,7 +45,12 @@ HDR = struct.Struct("<Q")
 QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT,
                  history=HistoryPolicy.KEEP_LAST, depth=1)
 
-FM_ROOT = "/home/js/Desktop/vive_franka_teleop/fruit-manipulation"
+# 2026-08-16 이관: 원본 PC 하드코딩(/home/js/...) 대신 패키지 동봉 sam2 를 기본으로.
+# 환경변수 FM_ROOT 로 override 가능 (구 배치와의 호환).
+FM_ROOT = os.environ.get(
+    "FM_ROOT",
+    os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "..", "sam2")))
 SAM2_CKPT = os.path.join(FM_ROOT, "sam2.1_hiera_tiny.pt")
 SAM2_CFG = "configs/sam2.1/sam2.1_hiera_t.yaml"
 

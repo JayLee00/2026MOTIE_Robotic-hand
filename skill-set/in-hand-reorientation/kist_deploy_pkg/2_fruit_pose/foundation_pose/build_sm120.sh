@@ -13,6 +13,14 @@ source "$HOME/miniconda3/etc/profile.d/conda.sh"
 conda env list | grep -qE '^foundationpose\s' || conda env create -f "$FP/environment.yml"
 conda activate foundationpose
 
+# CUDA 12.8 의 nvcc 는 g++ >=14 를 거부한다. conda-forge 기본 cxx-compiler 가 g++15 를
+# 끌고 오므로 (실측: pytorch3d 빌드가 "g++ 15.3.0 > maximum required" 로 실패) 13 으로 고정.
+conda install -y -c conda-forge 'gcc_linux-64=13.*' 'gxx_linux-64=13.*'
+export CC="$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-cc"
+export CXX="$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-c++"
+export CUDAHOSTCXX="$CXX"
+"$CXX" --version | head -1
+
 export CUDA_HOME=/usr/local/cuda-12.8
 export PATH="$CUDA_HOME/bin:$PATH"
 export TORCH_CUDA_ARCH_LIST="12.0+PTX"

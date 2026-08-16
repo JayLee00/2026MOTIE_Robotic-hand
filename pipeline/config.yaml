@@ -44,6 +44,7 @@ timeouts_s:
   services_ready: 900 # Molmo 로딩 ~1분 (콜드 스타트는 더 걸릴 수 있음)
   place_server_ready: 300
   twin_ready: 180
+  fruit_viz_ready: 300  # FoundationPose 서버 모델 로드 (첫 실행은 JIT 컴파일로 더 걸릴 수 있음)
 
 # 강성 모델이 지원하는 과일 → deploy_task3_ros2.py 의 stdin 번호
 # ⚠ 모델에 orange 가 없어 감귤류인 lemon 으로 대용한다. 데모 과일이 바뀌면 여기를 바꾼다.
@@ -88,6 +89,14 @@ services:
 
   # /place/status 이벤트 로거 (선택)
   place_logger: /usr/bin/python3 -u {root}/tools/diagnostics/place_logger.py
+
+  # 과일 6DoF 오버레이 — FoundationPose+SAM2 로 과일 3D bbox 를 realsense 화면에 표시.
+  # seq 2(손 안 조작) 데모 화면용. 등록(과일 락)에 시간이 걸려 체인 시작 시 미리 띄운다.
+  # 서버는 GPU0 (VTDP 정책 cuda:1 과 분리). --no-fruit-viz 로 끈다. 실패해도 체인은 계속.
+  fruit_viz: >-
+    bash {inhand_dir}/kist_deploy_pkg/2_fruit_pose/foundation_pose/run_foundation_pose.sh
+    --fruit {query}
+  fruit_viz_ready_pattern: "fp_server 준비 완료"
 
 stages:
   # ── seq 1 : 물체 파지 ────────────────────────────────────────────────────

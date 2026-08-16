@@ -75,10 +75,11 @@ fi
 # /fruit/pose 가 실제로 나올 때까지 기다린다 (SAM2+FP 로드에 시간이 걸린다)
 echo ""
 echo "══ 2) /fruit/pose 대기 (최대 180초) ══"
-source /opt/ros/humble/setup.bash
-source /home/js/franka_ros2_ws/install/setup.bash
-export ROS_DOMAIN_ID=9 RMW_IMPLEMENTATION=rmw_fastrtps_cpp ROS_LOCALHOST_ONLY=0
-export FASTRTPS_DEFAULT_PROFILES_FILE="$PROJ/config/fastdds_lan_only.xml"
+# 2026-08-16 이관 (prime-ws): 이 PC 표준 환경 사용. 패키지의 fastdds_lan_only.xml 은
+# 원본 PC(192.168.0.1) 전용 — 여기서 쓰면 DDS 가 전멸한다.
+ROBOT_ROOT="$(cd "$PROJ/../../.." && pwd)"    # …/RobotAgentSystem
+source "$ROBOT_ROOT/tools/env/setup_env.sh"
+export DISPLAY="${DISPLAY:-:1}"
 
 ok=""
 for i in $(seq 1 36); do

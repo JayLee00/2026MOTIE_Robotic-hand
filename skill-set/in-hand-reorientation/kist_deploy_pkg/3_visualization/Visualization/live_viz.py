@@ -41,7 +41,10 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 PROJ = HERE.parent
-sys.path.insert(0, str(PROJ / "record"))          # fruit_overlay 재사용
+# 2026-08-16 이관: 배포 레이아웃에서 fruit_overlay 는 2_fruit_pose/record/ 에 있다
+# (원본 PC 는 프로젝트 루트의 record/ 였음). 두 위치 모두 시도한다.
+sys.path.insert(0, str(PROJ / "record"))
+sys.path.insert(0, str(PROJ.parent / "2_fruit_pose" / "record"))
 
 from tactile_render import (BG, KIN_FINGER_LABEL, N_PART,  # noqa: E402
                             N_TAXEL, PART_COLORS, VMAX_DEFAULT, Scene3D)

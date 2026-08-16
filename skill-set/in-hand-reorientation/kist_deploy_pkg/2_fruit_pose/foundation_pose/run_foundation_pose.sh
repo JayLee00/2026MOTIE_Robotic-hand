@@ -31,18 +31,21 @@ COLOR_FAST="$NS/color/image_fast"
 INFO="$NS/color/camera_info"
 DEPTH="$NS/aligned_depth_to_color/image_raw"
 
-IMAGE=foundationpose:local     # setup.sh 가 공식 이미지에 sm_86 패치를 구워 만든 것
-CPY=/opt/conda/envs/my/bin/python   # 이미지의 torch 는 conda env "my" 에 있다
-CONTAINER=fp_server
+# 2026-08-16 이관 (prime-ws, RTX 5090): docker(sm_86) 대신 conda env `foundationpose`
+# (build_sm120.sh 가 만든 sm_120 빌드)로 fp_server 를 돌린다.
+CPY="$HOME/miniconda3/envs/foundationpose/bin/python"
+FP_GPU="${FP_GPU:-0}"          # fp_server GPU — VTDP 정책(cuda:1)과 분리
+CONTAINER=fp_server            # (docker 아님 — pkill 라벨로만 사용)
 PORT=5577
 MESH="$HERE/assets/orange.obj"
 FPROOT="$HERE/FoundationPose"
 PUB_NS=/fruit          # 기본은 드롭인(기존 오버레이가 그대로 받음)
 
-source /opt/ros/humble/setup.bash
-source /home/js/franka_ros2_ws/install/setup.bash
-export ROS_DOMAIN_ID=9 RMW_IMPLEMENTATION=rmw_fastrtps_cpp ROS_LOCALHOST_ONLY=0
-export FASTRTPS_DEFAULT_PROFILES_FILE="$PROJ/config/fastdds_lan_only.xml"
+# 이 PC 의 표준 환경 — ROS2 + 워크스페이스 + DOMAIN_ID=9 + DDS 프로파일
+# (~/.ros/fastdds_ros2_link.xml). 패키지의 config/fastdds_lan_only.xml 은 원본 PC
+# (192.168.0.1) 전용이라 여기서 쓰면 DDS 가 전멸한다 — 절대 교체하지 말 것.
+ROBOT_ROOT="$(cd "$PROJ/../../../.." && pwd)"    # …/RobotAgentSystem
+source "$ROBOT_ROOT/tools/env/setup_env.sh"
 export DISPLAY="${DISPLAY:-:1}"
 
 while [ $# -gt 0 ]; do
@@ -86,23 +89,23 @@ hz() { timeout 6 ros2 topic hz "$1" 2>/dev/null | grep -oP 'average rate: [\d.]+
 # 나와 산술식이 깨진다. 첫 줄만 취한다.
 stale() { pgrep -fc "$1" 2>/dev/null | head -1; }
 N_STALE=$(( $(stale "image_transport/republish") + $(stale "fp_ros_node.py") \
-          + $(stale "fruit_label_node.py") ))
-if [ "$N_STALE" -gt 0 ] || docker ps -a --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+          + $(stale "fruit_label_node.py") + $(stale "foundation_pose/fp_server.py") ))
+if [ "$N_STALE" -gt 0 ]; then
   echo "── 이전 실행 잔재 정리 ──"
   pkill -f "image_transport/republish.*color/image_fast" 2>/dev/null
   pkill -f "foundation_pose/fp_ros_node.py"   2>/dev/null
   pkill -f "foundation_pose/fruit_label_node.py" 2>/dev/null
   pkill -f "record/fruit_overlay.py"          2>/dev/null
-  docker rm -f "$CONTAINER" >/dev/null 2>&1
+  pkill -f "foundation_pose/fp_server.py"     2>/dev/null
   sleep 2
   echo "  정리 완료 (republish $(stale 'image_transport/republish')개 남음)"
 fi
 
 echo "── 0) 준비물 점검 ──"
 MISSING=0
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-  echo "  ✗ 도커 이미지 없음: $IMAGE (setup.sh 가 만든다)"; MISSING=1
-else echo "  ✓ 도커 이미지"; fi
+if ! "$CPY" -c "import torch, pytorch3d, nvdiffrast" >/dev/null 2>&1; then
+  echo "  ✗ conda env 'foundationpose' 불완전 — build_sm120.sh 를 돌리세요"; MISSING=1
+else echo "  ✓ conda env foundationpose (sm_120 빌드)"; fi
 if [ ! -d "$FPROOT" ]; then echo "  ✗ FoundationPose 저장소 없음: $FPROOT"; MISSING=1
 else echo "  ✓ FoundationPose 저장소"; fi
 if [ ! -d "$FPROOT/weights" ] || [ -z "$(ls -A "$FPROOT/weights" 2>/dev/null)" ]; then
@@ -137,7 +140,7 @@ cleanup() {
   # 게 쌓이면 같은 컬러 프레임이 N중으로 발행돼 시간동기화가 무너지고 자세 주기가
   # 30Hz → 12Hz 로 주저앉는다(실측: 15개 누적, image_fast 51.8Hz).
   pkill -f "image_transport/republish.*$COLOR_FAST" 2>/dev/null
-  docker rm -f "$CONTAINER" >/dev/null 2>&1
+  pkill -f "foundation_pose/fp_server.py" 2>/dev/null
   wait 2>/dev/null; echo "종료"
 }
 trap cleanup EXIT INT TERM
@@ -151,26 +154,24 @@ setsid ros2 run image_transport republish compressed raw \
 PIDS+=($!); sleep 3
 R=$(hz "$COLOR_FAST"); echo "  $COLOR_FAST : ${R:-✗ (로그 /tmp/fp_republish.log)}"
 
-echo "── 3) FoundationPose 서버 (docker, GPU) ──"
-docker rm -f "$CONTAINER" >/dev/null 2>&1
-docker run -d --name "$CONTAINER" --gpus all --network=host --ipc=host \
-  --env NVIDIA_DISABLE_REQUIRE=1 -e PYTHONUNBUFFERED=1 \
-  -v /home:/home -v /tmp:/tmp \
-  -w "$FPROOT" "$IMAGE" \
+echo "── 3) FoundationPose 서버 (conda env foundationpose, GPU$FP_GPU) ──"
+pkill -f "foundation_pose/fp_server.py" 2>/dev/null; sleep 1
+setsid env CUDA_VISIBLE_DEVICES="$FP_GPU" PYTHONUNBUFFERED=1 \
   "$CPY" "$HERE/fp_server.py" --mesh "$MESH" --port "$PORT" --fp-root "$FPROOT" \
-  >/tmp/fp_server_start.log 2>&1
-echo "  컨테이너 기동 — 모델 로드 대기(최대 120s)"
+  >/tmp/fp_server.log 2>&1 &
+SERVER_PID=$!; PIDS+=($SERVER_PID)
+echo "  서버 기동 — 모델 로드 대기(최대 120s, 로그 /tmp/fp_server.log)"
 for i in $(seq 1 120); do
-  docker logs "$CONTAINER" 2>&1 | grep -q "listening on" && break
-  if ! docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
-    echo "  ✗ 컨테이너가 죽었습니다. 로그:"; docker logs "$CONTAINER" 2>&1 | tail -25; exit 1
+  grep -q "listening on" /tmp/fp_server.log 2>/dev/null && break
+  if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+    echo "  ✗ fp_server 가 죽었습니다. 로그:"; tail -25 /tmp/fp_server.log; exit 1
   fi
   sleep 1
 done
-if docker logs "$CONTAINER" 2>&1 | grep -q "listening on"; then
+if grep -q "listening on" /tmp/fp_server.log 2>/dev/null; then
   echo "  ✓ fp_server 준비 완료 (:$PORT)"
 else
-  echo "  ✗ 시간 초과. 로그:"; docker logs "$CONTAINER" 2>&1 | tail -25; exit 1
+  echo "  ✗ 시간 초과. 로그:"; tail -25 /tmp/fp_server.log; exit 1
 fi
 
 echo "── 4) ROS2 브리지 (호스트, SAM2 초기 마스크) ──"

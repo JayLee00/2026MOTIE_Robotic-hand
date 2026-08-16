@@ -18,12 +18,10 @@
 set +u   # ROS setup.bash 가 미설정 변수를 참조하므로 -u 금지
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJ="$(dirname "$HERE")"
-WS=/home/js/franka_ros2_ws
-
-source /opt/ros/humble/setup.bash
-source "$WS/install/setup.bash"
-export ROS_DOMAIN_ID=9 RMW_IMPLEMENTATION=rmw_fastrtps_cpp ROS_LOCALHOST_ONLY=0
-export FASTRTPS_DEFAULT_PROFILES_FILE="$PROJ/config/fastdds_lan_only.xml"
+# 2026-08-16 이관 (prime-ws): 이 PC 표준 환경 사용. 패키지의 fastdds_lan_only.xml 은
+# 원본 PC(192.168.0.1) 전용 — 여기서 쓰면 DDS 가 전멸한다.
+ROBOT_ROOT="$(cd "$PROJ/../../.." && pwd)"    # …/RobotAgentSystem
+source "$ROBOT_ROOT/tools/env/setup_env.sh"
 export DISPLAY="${DISPLAY:-:1}"
 
 if [[ $EUID -eq 0 ]]; then
@@ -31,4 +29,4 @@ if [[ $EUID -eq 0 ]]; then
     echo "      일반 사용자로 실행하세요:  bash scripts/run_live_viz.sh"
 fi
 
-exec python3 "$PROJ/Visualization/live_viz.py" "$@"
+exec python3 "$PROJ/3_visualization/Visualization/live_viz.py" "$@"

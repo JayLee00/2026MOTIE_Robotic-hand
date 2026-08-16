@@ -19,25 +19,25 @@ fruits:
   - id: 1
     name: lemon
     name_ko: 레몬
-    mesh: assets/lemon.obj
+    mesh: assets/lemon/lemon.obj
     nominal: [0.070, 0.055, 0.055]
 
   - id: 2
     name: plum
     name_ko: 자두
-    mesh: assets/plum.obj
+    mesh: assets/plum/plum.obj
     nominal: [0.063, 0.060, 0.060]   # 실측 대표값 (개체차 있음)
 
   - id: 3
     name: mandarin
     name_ko: 감귤
-    mesh: assets/mandarin.obj
+    mesh: assets/mandarin/mandarin.obj
     nominal: [0.060, 0.060, 0.046]   # 폭 60, 꼭지축 46 (납작한 형태)
 
   - id: 4
     name: peach
     name_ko: 복숭아
-    mesh: assets/peach.obj
+    mesh: assets/peach/peach.obj
     nominal: [0.068, 0.068, 0.065]   # 둘레 68, 꼭지-엉덩이 65
     # ⚠ 스캔이 한 축으로 ~25% 늘어나 있어(87.8 vs 실측 68) 실측에 맞춰 눌렀다.
     #   형상은 맞지만 텍스처가 그만큼 찌그러진다. 회전이 잘 안 잡히면 재스캔 권장.
