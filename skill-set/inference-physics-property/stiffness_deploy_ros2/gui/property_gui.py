@@ -82,7 +82,7 @@ PROPS = [
 #     MID 하한 ≤ val ≤ MID 상한 → MID
 #     val >  MID 상한          → HIGH
 #   실제 강성은 대략 0 ~ 15 N/mm 범위로 나온다.
-STIFFNESS_MID_RANGE = (3.5, 8.5)      # (MID 하한, MID 상한) 단위 N/mm
+STIFFNESS_MID_RANGE = (1.0, 3.0)      # (MID 하한, MID 상한) 단위 N/mm
 GROUP_NAMES = ("LOW", "MID", "HIGH")  # 순서 고정: 낮음 / 중간 / 높음
 GROUP_COLORS = {                      # 배지 글자·테두리 색
     "LOW":  "#0a84ff",

@@ -181,6 +181,9 @@ def main():
     p.add_argument("--retries", type=int, default=5)
     p.add_argument("--resample-hz", type=float, default=100.0,
                    help="전송 전 궤적 재샘플 주파수 [Hz], 0=재샘플 안 함")
+    p.add_argument("--min-duration", type=float, default=0.0,
+                   help="이동 최소 소요시간 [s] — 플랜이 이보다 빠르면 시간을 늘려 "
+                        "천천히 움직인다 (예: 5 = 5초 보간)")
     p.add_argument("--plan-only", action="store_true", help="플랜(충돌검사)만 하고 이동하지 않음")
     p.add_argument("--yes", action="store_true", help="실행 확인 프롬프트 생략")
     a = p.parse_args()
@@ -200,6 +203,17 @@ def main():
             if ans not in ("y", "yes"):
                 print("[goto_q] 취소")
                 return 1
+        if a.min_duration > 0 and traj.points:
+            last = traj.points[-1]
+            T = last.time_from_start.sec + last.time_from_start.nanosec * 1e-9
+            if 0 < T < a.min_duration:
+                k = a.min_duration / T          # 시간 늘리기 = 더 천천히 (속도 1/k)
+                for pt in traj.points:
+                    t = (pt.time_from_start.sec + pt.time_from_start.nanosec * 1e-9) * k
+                    pt.time_from_start = Duration(sec=int(t), nanosec=int((t - int(t)) * 1e9))
+                    pt.velocities = [v / k for v in pt.velocities]
+                print(f"[goto_q] 최소 소요시간 적용: {T:.2f}s → {a.min_duration:.2f}s "
+                      f"(속도 1/{k:.2f})", flush=True)
         traj = resample_traj(traj, a.resample_hz)
         return 0 if node.execute(traj) else 1
     except KeyboardInterrupt:

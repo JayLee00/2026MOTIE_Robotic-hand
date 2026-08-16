@@ -102,10 +102,61 @@ def sync_hand(node, repeat, timeout):
     return True
 
 
+def freeze(node, timeout):
+    """비상 정지 재앵커 (Ctrl+C 경로): MoveIt 을 거치지 않고 즉시.
+
+    arm  : 측정 관절각을 /franka/right/q_target 으로 직접 ×5 발행 — 그 자리에 정지.
+    hand : servo OFF 창 프로토콜로 mode 1 재진입 + 측정 counts 시드 ×2 + servo ON
+           (release 도중 Ctrl+C 로 mode 2 에 남아 있어도 안전하게 현재 자세 홀드).
+    """
+    from std_msgs.msg import Bool, Float64MultiArray
+
+    ok = True
+    # ── hand freeze ──
+    def pick_hand(m):
+        return list(m.position[:16]) if len(m.position) >= 16 else None
+    hq = read_state(node, "/hand/right/joint_states", BEST_EFFORT, pick_hand, timeout)
+    if hq is None:
+        print("[freeze] ✗ hand 측정 미수신", file=sys.stderr)
+        ok = False
+    else:
+        pub_servo = node.create_publisher(Bool, "/hand/right/cmd_servo", 10)
+        pub_mode = node.create_publisher(Int32, "/hand/right/cmd_mode", 10)
+        pub_tgt = node.create_publisher(Float32MultiArray, "/hand/right/q_target", BEST_EFFORT)
+        time.sleep(0.3)                                    # 매칭 대기
+        tick = 0.05                                        # 모드 전환 프로토콜 (D-6)
+        pub_servo.publish(Bool(data=False)); time.sleep(tick)
+        pub_mode.publish(Int32(data=1)); time.sleep(tick)
+        msg = Float32MultiArray(data=[float(v) for v in hq])
+        pub_tgt.publish(msg); time.sleep(tick)
+        pub_tgt.publish(msg); time.sleep(tick)
+        pub_servo.publish(Bool(data=True)); time.sleep(tick)
+        print(f"[freeze] hand ✓ 측정자세 홀드 (mode 1, counts {[round(v) for v in hq]})",
+              flush=True)
+    # ── arm freeze ──
+    def pick_arm(m):
+        return list(m.position[:7]) if len(m.position) >= 7 else None
+    aq = read_state(node, "/franka/right/joint_states", BEST_EFFORT, pick_arm, timeout)
+    if aq is None:
+        print("[freeze] ✗ arm 측정(/franka/right/joint_states) 미수신", file=sys.stderr)
+        ok = False
+    else:
+        pub_arm = node.create_publisher(Float64MultiArray, "/franka/right/q_target", BEST_EFFORT)
+        time.sleep(0.3)
+        msg = Float64MultiArray(data=[float(v) for v in aq])
+        for _ in range(5):
+            pub_arm.publish(msg)
+            time.sleep(0.05)
+        print(f"[freeze] arm ✓ 측정자세 정지 ({[round(v, 4) for v in aq]})", flush=True)
+    return ok
+
+
 def main():
     p = argparse.ArgumentParser(description="현재 state → target 동기화 (스테일 타겟 점프 방지)")
     p.add_argument("--arm", action="store_true", help="팔만 동기화")
     p.add_argument("--hand", action="store_true", help="손만 동기화")
+    p.add_argument("--freeze", action="store_true",
+                   help="비상 정지: MoveIt 없이 즉시 측정자세=타겟 (Ctrl+C 경로용)")
     p.add_argument("--hand-repeat", type=int, default=5)
     p.add_argument("--timeout", type=float, default=10.0, help="상태 수신 대기 [s]")
     a = p.parse_args()
@@ -115,6 +166,8 @@ def main():
     rclpy.init()
     node = rclpy.create_node("sync_target")
     try:
+        if a.freeze:
+            return 0 if freeze(node, a.timeout) else 1
         ok = True
         if do_hand:
             ok = sync_hand(node, a.hand_repeat, a.timeout) and ok

@@ -730,6 +730,48 @@ class Pipeline:
         cmd = fill(self.cfg["services"]["place_logger"], self.ctx)
         return self.pool.add(Proc("place_logger", cmd, self.logdir / "place_logger.log", self.log))
 
+    def goto_pick_home(self, why: str):
+        """PICK 초기 위치로 천천히 이동 (goto_q — MoveIt 충돌회피 + 최소 소요시간 보간)."""
+        ph = self.cfg.get("pick_home") or {}
+        q = ph.get("arm_q")
+        if not q:
+            return
+        dur = float(ph.get("duration_s", 5.0))
+        self.log.rule(f"PICK 초기 위치로 이동 — {why} ({dur:.0f}s 보간)")
+        cmd = (f"/usr/bin/python3 {ROOT}/tools/goto_q.py "
+               + " ".join(str(v) for v in q) + f" --yes --min-duration {dur}")
+        p = self.pool.add(Proc("goto_pick_home", cmd,
+                               self.logdir / "goto_pick_home.log", self.log))
+        deadline = time.time() + max(120.0, dur * 4)
+        while time.time() < deadline and p.alive():
+            time.sleep(0.5)
+        if p.alive() or p.returncode() != 0:
+            if p.alive():
+                p.stop()
+            raise StageError(f"PICK 초기 위치 이동 실패 (rc={p.returncode()})\n" + p.tail(15))
+        self.log("PICK 초기 위치 도착 ✓")
+
+    def emergency_freeze(self):
+        """Ctrl+C 비상 정지: 타겟을 쏘던 자식들을 즉시 쓸고, arm/hand 를 현재
+        측정자세로 재앵커해 그 자리에 홀드시킨다 (2026-08-17 사용자 지시)."""
+        self.log("비상 정지: 자식 프로세스 일괄 종료 → 현재 자세 홀드", "WARN")
+        for p in self.pool.procs:                 # 스트리밍 소스부터 전부 즉시 차단
+            p._kill_group(signal.SIGTERM)
+        time.sleep(0.7)
+        for p in self.pool.procs:
+            p._kill_group(signal.SIGKILL)
+        try:
+            r = subprocess.run(
+                ["/usr/bin/python3", str(ROOT / "tools" / "sync_target.py"), "--freeze"],
+                timeout=20, capture_output=True, text=True)
+            for ln in (r.stdout + r.stderr).splitlines()[-4:]:
+                self.log("  " + ln, "WARN" if r.returncode else "INFO")
+            self.log("비상 정지 완료 — arm/hand 현재 자세 홀드"
+                     if r.returncode == 0 else "비상 정지 일부 실패 — 로봇 상태 확인!",
+                     "WARN")
+        except Exception as e:                                     # noqa: BLE001
+            self.log(f"비상 정지 freeze 실패 ({e}) — 로봇 상태 확인!", "ERROR")
+
     def run_sync_target(self):
         """체인 시작 직전 state→target 동기화 (블로킹).
 
@@ -762,13 +804,13 @@ class Pipeline:
     def start_fruit_viz(self):
         """과일 6DoF 오버레이(FoundationPose 3D bbox) — seq 2 데모 화면.
 
-        등록(과일 락)에 시간이 걸리므로 체인 시작 시 미리 띄운다. 보조 화면이므로
-        실패해도 체인은 계속 간다(WARN 만). --no-fruit-viz 로 끈다.
+        2026-08-17: 기본 **비활성** (사용자 지시 — RViz 만 띄우고 화면 녹화).
+        켜려면 --fruit-viz. 보조 화면이므로 실패해도 체인은 계속 간다(WARN 만).
         """
         template = self.cfg["services"].get("fruit_viz")
-        if not template or self.args.no_fruit_viz:
-            if self.args.no_fruit_viz:
-                self.log("--no-fruit-viz — 과일 6DoF 오버레이를 띄우지 않는다", "WARN")
+        if not template or not self.args.fruit_viz or self.args.no_fruit_viz:
+            self.log("과일 6DoF 오버레이/SAM2 창 비활성 (기본) — RViz 만 사용. "
+                     "켜려면 --fruit-viz")
             return None
         self.log.rule("과일 6DoF 오버레이 기동 (FoundationPose — seq 2 화면)")
         cmd = fill(template, self.ctx)
@@ -908,13 +950,26 @@ class Pipeline:
         self.start_place_server()
         self.start_place_logger()
         self.start_fruit_viz()
-        self.spawn_early_stages()
 
-        for stage in ORDER:
-            if stage in self.args.skip:
-                self.log(f"seq {self.cfg['sequence_numbers'][stage]} ({stage}) skip", "WARN")
-                continue
-            self.run_stage(stage)
+        lap = 0
+        while True:
+            lap += 1
+            if self.args.loops:
+                self.log.rule(f"체인 {lap}/{self.args.loops} 바퀴")
+            elif lap > 1:
+                self.log.rule(f"체인 {lap}바퀴째 (무한 반복 — Ctrl+C 로 정지)")
+            # 매 바퀴 pick 초기 위치로 천천히 복귀 후 pick 부터 시작 (2026-08-17)
+            self.goto_pick_home("체인 시작" if lap == 1 else "place 완료 → 다음 체인 준비")
+            self.spawn_early_stages()
+            for stage in ORDER:
+                if stage in self.args.skip:
+                    self.log(f"seq {self.cfg['sequence_numbers'][stage]} ({stage}) skip",
+                             "WARN")
+                    continue
+                self.run_stage(stage)
+            self.log.rule(f"바퀴 {lap} 완료 ✅")
+            if self.args.loops and lap >= self.args.loops:
+                break
 
         self.log.rule("전체 시퀀스 완료 ✅")
         return 0
@@ -939,8 +994,12 @@ def parse_args(cfg: dict):
                    help="place 모델 서비스 5종: auto=없으면 기동(기본), off=이미 떠 있어야 함")
     p.add_argument("--twin", choices=["auto", "off"], default="auto",
                    help="MoveIt 트윈: auto=없으면 기동(기본), off=이미 떠 있어야 함")
-    p.add_argument("--no-fruit-viz", action="store_true",
-                   help="과일 6DoF 오버레이(FoundationPose 3D bbox 창)를 띄우지 않는다")
+    p.add_argument("--fruit-viz", action="store_true",
+                   help="과일 6DoF 오버레이/SAM2 창을 띄운다 (기본: RViz 만 — 화면 녹화용)")
+    p.add_argument("--no-fruit-viz", action="store_true", help=argparse.SUPPRESS)  # 구 플래그 호환
+    p.add_argument("--loops", type=int, default=0,
+                   help="체인 반복 횟수. 0=무한 (place 후 pick 초기 위치로 복귀해 반복, "
+                        "Ctrl+C 로 정지 — 정지 시 arm/hand 를 현재 자세로 즉시 홀드)")
     p.add_argument("--no-sync-target", action="store_true",
                    help="체인 시작 전 state→target 동기화를 생략한다 (점프 위험 감수)")
     p.add_argument("--inhand-legacy", action="store_true",
@@ -972,7 +1031,12 @@ def main() -> int:
         log(str(e), "ERROR")
         return 1
     except KeyboardInterrupt:
-        log("사용자 중단 (Ctrl+C) — 하위 프로세스를 정리한다", "WARN")
+        log("사용자 중단 (Ctrl+C) — 비상 정지: 현재 자세 홀드 후 정리", "WARN")
+        if pipe is not None and not args.dry_run:
+            try:
+                pipe.emergency_freeze()
+            except Exception as e:                                 # noqa: BLE001
+                log(f"비상 정지 실패 ({e}) — 로봇 상태 확인!", "ERROR")
         return 130
     finally:
         if pipe is not None:

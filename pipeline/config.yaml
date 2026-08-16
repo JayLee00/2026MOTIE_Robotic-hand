@@ -71,6 +71,12 @@ inhand_policy:
                      # 종료 후 goto+squeeze 재파지로 마무리. 비전 기반 종료판정은 후속 과제.
   device: cuda:1     # 추론 GPU — place 서비스(GPU0 Molmo ~17GB)와 분리
 
+# PICK 초기 위치 (2026-08-17 사용자 지정) — 체인 시작 시, 그리고 매 바퀴 place 종료 후
+# 이 관절각으로 천천히(duration_s 보간) 이동한 뒤 pick 을 시작한다.
+pick_home:
+  arm_q: [0.5540, -0.2303, -0.0393, -2.3799, -0.6360, 1.6675, 1.3224]
+  duration_s: 5.0
+
 # 시작 시 이전 실행 고아 잔재 일괄 정리 (2026-08-17 사용자 지시: "시작하면 다 죽이고 시작").
 # always: per-run 프로세스 — 새 체인 시작 시 살아 있으면 무조건 잘못된 것 (가로채기/중복 발행원).
 # orphan_only: 부모가 죽어 systemd/init 에 입양된 것만 종료 — 살아있는 트윈(재사용)은 보호.
@@ -150,6 +156,7 @@ stages:
       /usr/bin/python3 scripts/run_scenario1_host.py
       --calibration {calibration}
       --execute_robot --yes --query "{query}"
+      --speed_factor 0.4
 
   # ── seq 2 : 손 안 조작 ───────────────────────────────────────────────────
   # 2026-08-16 업데이트: VTDP 학습 정책(kist_deploy_pkg/1_policy)이 기본 경로.
