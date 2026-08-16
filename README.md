@@ -50,6 +50,7 @@ RobotAgentSystem/
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 시퀀스 규약, 데이터 흐름, 왜 이렇게 나뉘는가 |
 | [docs/MIGRATION.md](docs/MIGRATION.md) | 3PC→2PC 통합 내역, 무엇을 어디로 옮겼는가, 남은 리스크 |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 증상별 원인/조치 |
+| [docs/DEV_REPORT.md](docs/DEV_REPORT.md) | **개발 보고서** — 기술 간 연결(arm/hand 정렬), 2026-08-16 업데이트 skill 2종(VTDP 정책·ecoflex 숙도) 통합 내역, 정책 종료판정 검토 |
 
 ## 안전
 
