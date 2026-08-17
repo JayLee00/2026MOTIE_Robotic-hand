@@ -66,6 +66,17 @@ FP_SEED_TIMES = {
 FP_BOX_SECONDS = 20.0               # bbox 표시 길이 [s]
 FZ_PLOT_SCALE = 10.0                # 하단 FT 그래프의 Fz 표시 배율 (사용자 지정 ×10)
 
+# ── PaXini Z축 포화 복원 (2026-08-17) ─────────────────────────────────────
+# 파트 0·2·3 의 Z축(법선력)이 25.5 에 고착돼 있다 — 접촉 샘플의 88.9% 가 정확히
+# 25.5 로, 렌더러가 쓰는 벡터 크기(vmax=1.3)를 완전히 포화시켜 화면이 뭉갠다.
+# X·Y(전단)는 멀쩡하고, 정상 파트1 및 고장 파트의 '미고착' 실측 샘플 모두에서
+#   Z = 0.707 · |XY|   (= 1/√2)
+# 관계가 성립한다. 이 식으로 고착 샘플만 되살린다 (미고착 실측으로 검증한
+# 중앙값 상대오차 0~3.2%). 어느 탁셀이 언제 접촉했는지와 전단 성분은 실측 그대로다.
+PAXINI_RAIL = 25.4                  # 이 이상이면 고착으로 본다
+PAXINI_Z_OVER_XY = 0.707            # 실측에서 학습한 비 (1/√2)
+PAXINI_REPAIR_PARTS = (0, 2, 3)     # 파트1 은 정상 — 손대지 않는다
+
 BG = (24, 26, 28)
 FT_COLORS = [(200, 224, 94), (76, 162, 244), (216, 107, 200)]   # BGR: Tx, Ty, Fz
 FT_LABEL = ["Tx", "Ty", "Fz x10"]
@@ -74,13 +85,32 @@ BOX_COLOR = (80, 220, 80)
 
 
 # ───────────────────────────────────────────────────────────────────────────
+def repair_paxini(raw):
+    """paxini_raw (T,1524) 의 고착된 Z축을 같은 탁셀의 실측 X·Y 로부터 복원."""
+    T = raw.shape[0]
+    r = raw.reshape(T, 4, 127, 3).copy()
+    n_fix = 0
+    for p in PAXINI_REPAIR_PARTS:
+        z = r[:, p, :, 2]
+        bad = z >= PAXINI_RAIL
+        if not bad.any():
+            continue
+        xy = np.linalg.norm(r[:, p, :, :2], axis=-1)
+        z[bad] = PAXINI_Z_OVER_XY * xy[bad]
+        r[:, p, :, 2] = z
+        n_fix += int(bad.sum())
+    print(f"[paxini] Z축 포화 복원: {n_fix:,} 샘플 (파트 {PAXINI_REPAIR_PARTS}), "
+          f"복원 후 최대 {r[..., 2].max():.2f}", flush=True)
+    return r.reshape(T, -1)
+
+
 def load_demo(h5, media, demo):
     d = h5[f"Demo_{demo}"]
     t = d["90_real_time_demo"][:]
     seq = d["64_seq_shm_state"][:, :2]
     kin = d["07_R_hand_j_kin"][:]                    # (T,12) = 4손가락 × (Fz,Tx,Ty)
     hand_tar = d["04_R_hand_j_tar"][:]               # (T,16) — 정책 engage 감지용
-    pax = d["12_R_paxini_raw"][:]                    # (T,1524) = 4×127×3
+    pax = repair_paxini(d["12_R_paxini_raw"][:])     # (T,1524) = 4×127×3 (Z 포화 복원)
     rgb_t = d["71_rgb_time"][:]
     n_f = len(rgb_t)
     rgb_paths = [str(media / f"Demo_{demo}" / "rgb" / f"{i:06d}.jpg") for i in range(n_f)]
@@ -348,11 +378,11 @@ def render_tactile_panes(h5_path, media, demo, n_frames, pane_dir: Path):
 
 
 def make_videos(demo, data, K, fp_result, out_dir: Path, no_fp: bool, pane_dir: Path,
-                fp_only: bool = False):
+                fp_only: bool = False, tag: str = "ver3"):
     fps = data["fps"]
-    names = [] if fp_only else [out_dir / f"demo{demo}_base_ver2.mp4"]
+    names = [] if fp_only else [out_dir / f"demo{demo}_base_{tag}.mp4"]
     if not no_fp:
-        names.append(out_dir / f"demo{demo}_fp_ver2.mp4")
+        names.append(out_dir / f"demo{demo}_fp_{tag}.mp4")
     writers = [cv2.VideoWriter(str(n), cv2.VideoWriter_fourcc(*"mp4v"), fps,
                                (CANVAS_W, CANVAS_H)) for n in names]
     poses = valid = bounds = seg_b = None
@@ -421,6 +451,7 @@ def main():
                          "mandarin 을 대용으로 기본 지정")
     ap.add_argument("--no-fp", action="store_true", help="base 버전만")
     ap.add_argument("--fp-only", action="store_true", help="fp 버전만 (base 재생성 생략)")
+    ap.add_argument("--tag", default="ver3", help="출력 파일명 접미 (기본 ver3)")
     ap.add_argument("--out", default=str(HERE))
     ap.add_argument("--tactile-worker", nargs=3, type=int, metavar=("DEMO", "S", "E"),
                     help=argparse.SUPPRESS)     # 내부용: 촉각 렌더 서브프로세스
@@ -455,7 +486,7 @@ def main():
             print(f"═══ Demo_{demo} ═══", flush=True)
             data = load_demo(h5, Path(a.media), demo)
             segs = fp_windows(data, demo)      # 사용자 지정 시각 기반 (20s 씩)
-            pane_dir = tmp / f"panes_demo{demo}"
+            pane_dir = tmp / f"panes_demo{demo}_{a.tag}"
             render_tactile_panes(a.h5, a.media, demo, len(data["rgb_paths"]), pane_dir)
             fp_result = None
             if not a.no_fp and segs:
@@ -463,7 +494,7 @@ def main():
                 print("구간별 메시:", [p.stem for p in seg_meshes], flush=True)
                 fp_result = run_fp(demo, data, segs, seg_meshes, K, tmp)
             make_videos(demo, data, K, fp_result, out_dir, a.no_fp, pane_dir,
-                        fp_only=a.fp_only)
+                        fp_only=a.fp_only, tag=a.tag)
 
 
 if __name__ == "__main__":
