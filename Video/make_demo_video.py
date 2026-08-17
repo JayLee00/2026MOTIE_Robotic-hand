@@ -76,6 +76,7 @@ FZ_PLOT_SCALE = 10.0                # 하단 FT 그래프의 Fz 표시 배율 (�
 PAXINI_RAIL = 25.4                  # 이 이상이면 고착으로 본다
 PAXINI_Z_OVER_XY = 0.707            # 실측에서 학습한 비 (1/√2)
 PAXINI_REPAIR_PARTS = (0, 2, 3)     # 파트1 은 정상 — 손대지 않는다
+PAXINI_REPAIR_ENABLED = True        # --no-paxini-repair 로 끈다 (건전한 녹화용)
 
 BG = (24, 26, 28)
 FT_COLORS = [(200, 224, 94), (76, 162, 244), (216, 107, 200)]   # BGR: Tx, Ty, Fz
@@ -87,6 +88,9 @@ BOX_COLOR = (80, 220, 80)
 # ───────────────────────────────────────────────────────────────────────────
 def repair_paxini(raw):
     """paxini_raw (T,1524) 의 고착된 Z축을 같은 탁셀의 실측 X·Y 로부터 복원."""
+    if not PAXINI_REPAIR_ENABLED:
+        print("[paxini] 보정 비활성 (--no-paxini-repair) — 원본 그대로 사용", flush=True)
+        return raw
     T = raw.shape[0]
     r = raw.reshape(T, 4, 127, 3).copy()
     n_fix = 0
@@ -368,10 +372,12 @@ def render_tactile_panes(h5_path, media, demo, n_frames, pane_dir: Path):
         e = min(n_frames, s + TACTILE_CHUNK)
         print(f"[tactile] 렌더 {s}..{e} (남은 {len(missing)}장, 시도 {attempt + 1})",
               flush=True)
-        subprocess.run([sys.executable, os.path.abspath(__file__),
-                        "--tactile-worker", str(demo), str(s), str(e),
-                        "--h5", str(h5_path), "--media", str(media),
-                        "--out", str(pane_dir)])
+        cmd = [sys.executable, os.path.abspath(__file__),
+               "--tactile-worker", str(demo), str(s), str(e),
+               "--h5", str(h5_path), "--media", str(media), "--out", str(pane_dir)]
+        if not PAXINI_REPAIR_ENABLED:
+            cmd.append("--no-paxini-repair")
+        subprocess.run(cmd)
     missing = [i for i in need if not (pane_dir / f"pane_{i:06d}.jpg").is_file()]
     if missing:
         raise RuntimeError(f"촉각 렌더 미완 {len(missing)}장 (예: {missing[:3]})")
@@ -380,11 +386,21 @@ def render_tactile_panes(h5_path, media, demo, n_frames, pane_dir: Path):
 def make_videos(demo, data, K, fp_result, out_dir: Path, no_fp: bool, pane_dir: Path,
                 fp_only: bool = False, tag: str = "ver3"):
     fps = data["fps"]
-    names = [] if fp_only else [out_dir / f"demo{demo}_base_{tag}.mp4"]
+    # base / fp 라이터를 이름으로 분리해서 든다 — 인덱스로 다루면 --no-fp 일 때
+    # fp 블록이 base 라이터에 덧써 프레임이 2배가 된다 (2026-08-17 실측 버그)
+    names = []
+    w_base = w_fp = None
+    if not fp_only:
+        p = out_dir / f"demo{demo}_base_{tag}.mp4"
+        w_base = cv2.VideoWriter(str(p), cv2.VideoWriter_fourcc(*"mp4v"), fps,
+                                 (CANVAS_W, CANVAS_H))
+        names.append(p)
     if not no_fp:
-        names.append(out_dir / f"demo{demo}_fp_{tag}.mp4")
-    writers = [cv2.VideoWriter(str(n), cv2.VideoWriter_fourcc(*"mp4v"), fps,
-                               (CANVAS_W, CANVAS_H)) for n in names]
+        p = out_dir / f"demo{demo}_fp_{tag}.mp4"
+        w_fp = cv2.VideoWriter(str(p), cv2.VideoWriter_fourcc(*"mp4v"), fps,
+                               (CANVAS_W, CANVAS_H))
+        names.append(p)
+    writers = [w for w in (w_base, w_fp) if w is not None]
     poses = valid = bounds = seg_b = None
     if fp_result is not None:
         poses, valid, bounds, seg_b = fp_result
@@ -420,17 +436,17 @@ def make_videos(demo, data, K, fp_result, out_dir: Path, no_fp: bool, pane_dir: 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (60, 220, 255), 2, cv2.LINE_AA)
 
         # base 버전
-        if not fp_only:
+        if w_base is not None:
             put_left(bgr)
-            writers[0].write(canvas)
+            w_base.write(canvas)
         # fp 버전 (지정 구간 + 유효 자세일 때만 bbox)
-        if True:
+        if w_fp is not None:
             left = bgr.copy()
             if valid is not None and valid[i]:
                 si = int(np.argmax((seg_b[:, 0] <= i) & (i < seg_b[:, 1])))
                 draw_box(left, poses[i], K, bounds[si])
             put_left(left)
-            writers[-1].write(canvas)
+            w_fp.write(canvas)
         if i % 1000 == 0:
             dt = time.perf_counter() - t0
             print(f"[compose] demo{demo}: {i}/{n} ({dt:.0f}s)", flush=True)
@@ -452,10 +468,15 @@ def main():
     ap.add_argument("--no-fp", action="store_true", help="base 버전만")
     ap.add_argument("--fp-only", action="store_true", help="fp 버전만 (base 재생성 생략)")
     ap.add_argument("--tag", default="ver3", help="출력 파일명 접미 (기본 ver3)")
+    ap.add_argument("--no-paxini-repair", action="store_true",
+                    help="PaXini Z축 포화 보정을 끈다 (원본이 건전한 녹화)")
     ap.add_argument("--out", default=str(HERE))
     ap.add_argument("--tactile-worker", nargs=3, type=int, metavar=("DEMO", "S", "E"),
                     help=argparse.SUPPRESS)     # 내부용: 촉각 렌더 서브프로세스
     a = ap.parse_args()
+
+    if a.no_paxini_repair:                      # 워커 서브프로세스에도 전달된다
+        globals()["PAXINI_REPAIR_ENABLED"] = False
 
     if a.tactile_worker:
         demo, s, e = a.tactile_worker
