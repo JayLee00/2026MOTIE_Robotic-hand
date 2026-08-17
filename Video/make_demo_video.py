@@ -54,12 +54,21 @@ PANE_W, PANE_H = 640, 480          # 좌 RGB / 우 촉각
 STRIP_H = 300                       # 하단 FT
 CANVAS_W, CANVAS_H = PANE_W * 2, PANE_H + STRIP_H
 TRAIL_S = 6.0                       # FT 표시 구간 [s]
-SEED_OFFSET_FRAMES = 15             # inhand 시작 후 이 프레임 뒤에 SAM2 시딩 (~0.5s)
 MIN_SEG_FRAMES = 30                 # 이보다 짧은 inhand 조각은 무시
+
+# ── 2026-08-17(2차) 사용자 지정: bbox 구간을 **영상 시각(초)** 으로 직접 지정한다.
+# 각 시각에서 화면 중앙을 SAM2 로 1회 클릭해 과일을 seg 하고, 그 시점부터
+# FP_BOX_SECONDS 초 동안만 FoundationPose bbox 를 표시한다.
+FP_SEED_TIMES = {
+    0: [50.0, 170.0, 290.0],        # demo0: 50초 · 2분50초 · 4분50초
+    1: [60.0, 180.0, 295.0],        # demo1: 1분 · 3분 · 4분55초
+}
+FP_BOX_SECONDS = 20.0               # bbox 표시 길이 [s]
+FZ_PLOT_SCALE = 10.0                # 하단 FT 그래프의 Fz 표시 배율 (사용자 지정 ×10)
 
 BG = (24, 26, 28)
 FT_COLORS = [(200, 224, 94), (76, 162, 244), (216, 107, 200)]   # BGR: Tx, Ty, Fz
-FT_LABEL = ["Tx", "Ty", "Fz"]
+FT_LABEL = ["Tx", "Ty", "Fz x10"]
 FINGERS = ["index", "middle", "ring", "thumb"]
 BOX_COLOR = (80, 220, 80)
 
@@ -95,6 +104,25 @@ def segments_of(mask):
     return [(s, e) for s, e in segs if e - s >= MIN_SEG_FRAMES]
 
 
+def fp_windows(data, demo):
+    """사용자 지정 시각 → (seed_frame, end_frame) 목록. seed 에서 seg, +20s 까지 bbox."""
+    times = FP_SEED_TIMES.get(demo)
+    if not times:
+        return []
+    rgb_t = data["rgb_t"]
+    t0 = rgb_t[0]
+    out = []
+    for ts in times:
+        k = int(np.searchsorted(rgb_t, t0 + ts))
+        e = int(np.searchsorted(rgb_t, t0 + ts + FP_BOX_SECONDS))
+        k = min(k, len(rgb_t) - 2)
+        e = min(max(e, k + 2), len(rgb_t))
+        out.append((k, e))
+        print(f"[fp] demo{demo} bbox 구간: {ts:.0f}s (frame {k}) → "
+              f"{ts + FP_BOX_SECONDS:.0f}s (frame {e})", flush=True)
+    return out
+
+
 def seed_frame_for(data, s, e):
     """SAM2 시딩 프레임 선택 — 정책 engage(손 타겟이 100Hz 로 지속 갱신 시작) + 2초.
 
@@ -118,7 +146,47 @@ def seed_frame_for(data, s, e):
     return int(min(max(k, s), e - 1))
 
 
-# ── SAM2: 정책 engage+2s 프레임 중앙 클릭 1회 시딩 ──────────────────────────
+FRUIT_DEPTH_BAND = (0.15, 0.42)     # 손에 쥔 과일의 깊이 [m] (실측 0.26~0.30;
+                                    #  트레이의 다른 과일은 0.68 로 멀다)
+
+
+def fruit_click_point(bgr, depth_m=None):
+    """화면 중앙 부근에서 '손에 쥔 과일'을 찾아 클릭 지점을 돌려준다.
+
+    과일(레몬/토마토/복숭아)은 채도 높은 주황~빨강~노랑이고 손은 검정·팔/트레이는
+    흰색이라 색으로 분리된다. 여기에 **깊이 밴드**를 걸어 트레이에 이미 놓인 과일
+    (0.68m)을 배제하고 손에 쥔 것(0.26m)만 남긴다. 없으면 정확히 중앙.
+    """
+    h, w = bgr.shape[:2]
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    hue, sat, val = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    fruit = (((hue <= 35) | (hue >= 170)) & (sat >= 90) & (val >= 70)).astype(np.uint8)
+    roi = np.zeros_like(fruit)
+    # 깊이 밴드가 이미 강한 필터라 탐색창은 넉넉히 (지정 시각에 과일이 화면
+    # 하단에 있는 경우가 있다 — demo0 170s 실측)
+    x0, x1 = int(w * 0.15), int(w * 0.88)
+    y0, y1 = int(h * 0.10), int(h * 0.95)
+    roi[y0:y1, x0:x1] = 1
+    if depth_m is not None and depth_m.shape[:2] == (h, w):
+        lo, hi = FRUIT_DEPTH_BAND
+        roi = roi * ((depth_m > lo) & (depth_m < hi)).astype(np.uint8)
+    fruit = cv2.morphologyEx(fruit * roi, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
+    n, lab, stats, cent = cv2.connectedComponentsWithStats(fruit, 8)
+    best, best_score = None, 0.0
+    cx0, cy0 = w / 2, h / 2
+    for i in range(1, n):
+        area = stats[i, cv2.CC_STAT_AREA]
+        if area < 1500:
+            continue
+        cx, cy = cent[i]
+        dist = np.hypot(cx - cx0, cy - cy0) / (w / 2)          # 0=중앙
+        score = area * max(0.05, 1.0 - dist)                   # 크고 중앙에 가까울수록
+        if score > best_score:
+            best_score, best = score, (float(cx), float(cy))
+    return best if best is not None else (w / 2.0, h / 2.0)
+
+
+# ── SAM2: 지정 시각 프레임에서 '중앙의 과일' 클릭 1회 시딩 ──────────────────
 def sam2_masks(data, segs):
     rgb_paths = data["rgb_paths"]
     import torch
@@ -130,16 +198,27 @@ def sam2_masks(data, segs):
     pred = SAM2ImagePredictor(model)
     masks = []
     for s, e in segs:
-        k = seed_frame_for(data, s, e)
+        k = s                       # 지정 시각이 곧 시드 프레임
         bgr = cv2.imread(rgb_paths[k], cv2.IMREAD_COLOR)
         rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-        h, w = rgb.shape[:2]
+        dep = cv2.imread(data["depth_paths"][k], cv2.IMREAD_UNCHANGED)
+        dep_m = dep.astype(np.float32) / 1000.0 if dep is not None else None
+        pt = fruit_click_point(bgr, dep_m)          # 손에 쥔(가까운) 과일
         pred.set_image(rgb)
-        m, sc, _ = pred.predict(point_coords=np.array([[w // 2, h // 2]], dtype=np.float32),
-                                point_labels=np.array([1]), multimask_output=True)
-        best = m[int(np.argmax(sc))].astype(bool)
-        print(f"[sam2] 구간 {s}..{e}: seed frame {k}, mask {int(best.sum())}px "
-              f"(score {sc.max():.2f})", flush=True)
+        mm, sc, _ = pred.predict(
+            point_coords=np.array([pt], dtype=np.float32),
+            point_labels=np.array([1]), multimask_output=True)
+        # 과일 크기(2k~60k px)에 드는 후보 중 점수 최고를 고른다 — 손/팔 전체를
+        # 물고 오거나(수십만 px) 파편만 잡는(수백 px) 마스크를 배제
+        cands = [(float(sc[j]), mm[j].astype(bool)) for j in range(len(mm))
+                 if 2000 <= int(mm[j].sum()) <= 60000]
+        if cands:
+            score, best = max(cands, key=lambda z: z[0])
+        else:
+            j = int(np.argmax(sc))
+            score, best = float(sc[j]), mm[j].astype(bool)
+        print(f"[sam2] 구간 {s}..{e}: seed frame {k}, click ({pt[0]:.0f},{pt[1]:.0f}), "
+              f"mask {int(best.sum())}px (score {score:.2f})", flush=True)
         masks.append((k, best))
     return masks
 
@@ -152,7 +231,6 @@ def run_fp(demo, data, segs, seg_meshes, K, tmp: Path):
         z = np.load(out)
         return z["poses"], z["valid"], z["mesh_bounds"], z["seg_bounds"]
     seeds = sam2_masks(data, segs)
-    # 등록 프레임을 구간 시작으로 쓰되, 시드 프레임부터 추적하도록 구간을 시드에 맞춘다
     seg_bounds = [(k, e) for (s, e), (k, m) in zip(segs, seeds)]
     job = tmp / f"fp_job_demo{demo}.npz"
     np.savez_compressed(
@@ -211,8 +289,9 @@ def draw_strip(canvas, kin_win, t_win, t_now):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
         if len(t_win) < 2:
             continue
-        # kin 채널 순서 (Fz,Tx,Ty) → 표시 (Tx,Ty,Fz)
-        chan = [kin_win[:, f * 3 + 1], kin_win[:, f * 3 + 2], kin_win[:, f * 3 + 0]]
+        # kin 채널 순서 (Fz,Tx,Ty) → 표시 (Tx,Ty,Fz). Fz 는 ×FZ_PLOT_SCALE (사용자 지정)
+        chan = [kin_win[:, f * 3 + 1], kin_win[:, f * 3 + 2],
+                kin_win[:, f * 3 + 0] * FZ_PLOT_SCALE]
         allv = np.concatenate(chan)
         lo, hi = float(allv.min()), float(allv.max())
         rng = max(1e-6, hi - lo)
@@ -268,11 +347,12 @@ def render_tactile_panes(h5_path, media, demo, n_frames, pane_dir: Path):
         raise RuntimeError(f"촉각 렌더 미완 {len(missing)}장 (예: {missing[:3]})")
 
 
-def make_videos(demo, data, K, fp_result, out_dir: Path, no_fp: bool, pane_dir: Path):
+def make_videos(demo, data, K, fp_result, out_dir: Path, no_fp: bool, pane_dir: Path,
+                fp_only: bool = False):
     fps = data["fps"]
-    names = [out_dir / f"demo{demo}_base.mp4"]
+    names = [] if fp_only else [out_dir / f"demo{demo}_base_ver2.mp4"]
     if not no_fp:
-        names.append(out_dir / f"demo{demo}_fp.mp4")
+        names.append(out_dir / f"demo{demo}_fp_ver2.mp4")
     writers = [cv2.VideoWriter(str(n), cv2.VideoWriter_fourcc(*"mp4v"), fps,
                                (CANVAS_W, CANVAS_H)) for n in names]
     poses = valid = bounds = seg_b = None
@@ -310,16 +390,17 @@ def make_videos(demo, data, K, fp_result, out_dir: Path, no_fp: bool, pane_dir: 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (60, 220, 255), 2, cv2.LINE_AA)
 
         # base 버전
-        put_left(bgr)
-        writers[0].write(canvas)
-        # fp 버전 (inhand 구간 + 유효 자세일 때만 bbox)
-        if len(writers) > 1:
+        if not fp_only:
+            put_left(bgr)
+            writers[0].write(canvas)
+        # fp 버전 (지정 구간 + 유효 자세일 때만 bbox)
+        if True:
             left = bgr.copy()
             if valid is not None and valid[i]:
                 si = int(np.argmax((seg_b[:, 0] <= i) & (i < seg_b[:, 1])))
                 draw_box(left, poses[i], K, bounds[si])
             put_left(left)
-            writers[1].write(canvas)
+            writers[-1].write(canvas)
         if i % 1000 == 0:
             dt = time.perf_counter() - t0
             print(f"[compose] demo{demo}: {i}/{n} ({dt:.0f}s)", flush=True)
@@ -339,6 +420,7 @@ def main():
                          "이번 데모 = lemon,tomato,peach 인데 tomato CAD 가 없어 "
                          "mandarin 을 대용으로 기본 지정")
     ap.add_argument("--no-fp", action="store_true", help="base 버전만")
+    ap.add_argument("--fp-only", action="store_true", help="fp 버전만 (base 재생성 생략)")
     ap.add_argument("--out", default=str(HERE))
     ap.add_argument("--tactile-worker", nargs=3, type=int, metavar=("DEMO", "S", "E"),
                     help=argparse.SUPPRESS)     # 내부용: 촉각 렌더 서브프로세스
@@ -372,8 +454,7 @@ def main():
         for demo in demos:
             print(f"═══ Demo_{demo} ═══", flush=True)
             data = load_demo(h5, Path(a.media), demo)
-            segs = segments_of(data["inhand_f"])
-            print(f"inhand 구간: {segs} (프레임)", flush=True)
+            segs = fp_windows(data, demo)      # 사용자 지정 시각 기반 (20s 씩)
             pane_dir = tmp / f"panes_demo{demo}"
             render_tactile_panes(a.h5, a.media, demo, len(data["rgb_paths"]), pane_dir)
             fp_result = None
@@ -381,7 +462,8 @@ def main():
                 seg_meshes = [meshes[i % len(meshes)] for i in range(len(segs))]
                 print("구간별 메시:", [p.stem for p in seg_meshes], flush=True)
                 fp_result = run_fp(demo, data, segs, seg_meshes, K, tmp)
-            make_videos(demo, data, K, fp_result, out_dir, a.no_fp, pane_dir)
+            make_videos(demo, data, K, fp_result, out_dir, a.no_fp, pane_dir,
+                        fp_only=a.fp_only)
 
 
 if __name__ == "__main__":
